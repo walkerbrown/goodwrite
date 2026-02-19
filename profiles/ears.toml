@@ -1,0 +1,14 @@
+[profile]
+name = "ears"
+
+[rules]
+"ears/missing-shall" = "warn"
+"ears/multiple-shall" = "warn"
+"ears/missing-system-name" = "warn"
+"ears/clause-order" = "warn"
+"ears/missing-pattern" = "info"
+"ears/missing-condition-keyword" = "warn"
+"ears/passive-shall" = "warn"
+"ears/untestable-response" = "warn"
+"ears/ambiguous-trigger" = "info"
+"ears/vague-precondition" = "info"

@@ -1,0 +1,48 @@
+{
+  "name": "goodwrite",
+  "displayName": "goodwrite",
+  "description": "A linter for Simplified Technical English (ASD-STE100) and engineering requirement grammars.",
+  "version": "0.1.0",
+  "publisher": "walkerbrown",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/walkerbrown/goodwrite"
+  },
+  "categories": [
+    "Linters"
+  ],
+  "keywords": [
+    "linter",
+    "documentation",
+    "typst",
+    "markdown",
+    "asd-ste100"
+  ],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "activationEvents": [
+    "onLanguage:markdown",
+    "onLanguage:typst"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "typst",
+        "extensions": [
+          ".typ"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0",
+    "vscode": "^1.1.37"
+  }
+}

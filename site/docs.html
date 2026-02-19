@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>goodwrite Docs</title>
+        <meta
+            name="description"
+            content="goodwrite configuration, CLI commands, requirement syntax, and CI quality gates."
+        />
+        <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+        <link rel="stylesheet" href="./assets/styles.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <a class="wordmark" href="./index.html">goodwrite</a>
+            <nav class="nav">
+                <a href="./index.html">Home</a>
+                <a class="active" href="./docs.html">Docs</a>
+                <a href="./rules.html">Rule Explorer</a>
+                <a href="https://github.com/walkerbrown/goodwrite">GitHub</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <h1>Documentation</h1>
+                <p>🚧 Pardon our dust! Work in progress. 🚧</p>
+            </section>
+
+            <section class="grid">
+                <article class="card col-6">
+                    <h2>Install and Run</h2>
+                    <pre>
+# binary install (no Rust needed)
+curl -fsSL https://raw.githubusercontent.com/walkerbrown/goodwrite/main/scripts/install.sh | bash
+
+# or with cargo
+cargo install goodwrite-cli
+
+# check
+goodwrite check docs/**/*.md docs/**/*.typ
+
+# fix machine-applicable diagnostics
+goodwrite fix docs/manual.md
+
+# create starter config
+goodwrite init</pre
+                    >
+                </article>
+
+                <article class="card col-6">
+                    <h2>Config Boundary</h2>
+                    <p>Ruleset identity is external to source files:</p>
+                    <ul>
+                        <li>
+                            Set default/active requirement rulesets in
+                            <span class="inline-code">goodwrite.toml</span>.
+                        </li>
+                        <li>
+                            Override per invocation with
+                            <span class="inline-code"
+                                >--requirement-ruleset</span
+                            >.
+                        </li>
+                        <li>Source annotations never select a ruleset.</li>
+                    </ul>
+                </article>
+
+                <article class="card col-12">
+                    <h2>Requirement Syntax</h2>
+                    <p>
+                        Requirement type vocabulary comes from active
+                        requirement rulesets (EARS by default).
+                    </p>
+                    <div class="grid">
+                        <div class="col-6">
+                            <h3>Markdown</h3>
+                            <pre>
+&lt;!-- goodwrite:requirement --&gt;
+The system shall reset in less than 100 ms.
+&lt;!-- goodwrite:requirement:end --&gt;
+
+&lt;!-- optional type --&gt;
+&lt;!-- goodwrite:requirement:state-driven --&gt;
+While battery voltage is below 22.0 V,
+the system shall reduce transmit power.
+&lt;!-- goodwrite:requirement:end --&gt;</pre
+                            >
+                        </div>
+                        <div class="col-6">
+                            <h3>Typst</h3>
+                            <pre>
+#requirement[
+The system shall reset in less than 100 ms.
+]
+
+#requirement_state[
+While battery voltage is below 22.0 V,
+  the system shall reduce transmit power.
+]</pre
+                            >
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <p>
+                goodwrite.dev/docs • Canonical usage and CI contract reference.
+            </p>
+        </footer>
+    </body>
+</html>

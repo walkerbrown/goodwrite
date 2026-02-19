@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>goodwrite | Technical Documentation Linting</title>
+        <meta
+            name="description"
+            content="goodwrite is a linter for compliance with Simplified Technical English (ASD-STE100) in technical documentation and engineering requirements."
+        />
+        <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+        <link rel="stylesheet" href="./assets/styles.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <a class="wordmark" href="./index.html">goodwrite</a>
+            <nav class="nav">
+                <a class="active" href="./index.html">Home</a>
+                <a href="./docs.html">Docs</a>
+                <a href="./rules.html">Rule Explorer</a>
+                <a href="https://github.com/walkerbrown/goodwrite">GitHub</a>
+            </nav>
+        </header>
+
+        <main>
+            <section class="hero">
+                <p>
+                    <strong>goodwrite</strong> is a linter for engineering
+                    requirements and technical documentation, enforcing
+                    compliance with the standard for Simplified Technical
+                    English (ASD-STE100), requirements-style grammar, and your
+                    project-specific glossary of technical terms.
+                </p>
+                <blockquote class="quote">
+                    "The great enemy of clear language is insincerity. When
+                    there is a gap between one's real and one's declared aims,
+                    one turns as it were instinctively to long words and
+                    exhausted idioms, like a cuttlefish spurting out ink."
+                    <br /><br />
+                    "What is above all needed is to let the meaning choose the
+                    word, and not the other way about."
+                    <br /><br />
+                    "If you simplify your English, you are freed from the worst
+                    follies of orthodoxy. You cannot speak any of the necessary
+                    dialects, and when you make a stupid remark its stupidity
+                    will be obvious, even to yourself."
+                    <cite
+                        >—George Orwell,
+                        <a
+                            href="https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/"
+                            >"Politics and the English Language"</a
+                        >
+                        (1946)</cite
+                    >
+                </blockquote>
+            </section>
+
+            <div class="badges">
+                <a
+                    href="https://github.com/walkerbrown/goodwrite/actions/workflows/ci.yml"
+                    ><img
+                        alt="CI"
+                        src="https://img.shields.io/github/actions/workflow/status/walkerbrown/goodwrite/ci.yml?branch=main&label=ci"
+                /></a>
+                <a
+                    href="https://github.com/walkerbrown/goodwrite/actions/workflows/rule-accountability.yml"
+                    ><img
+                        alt="Rule accountability"
+                        src="https://img.shields.io/github/actions/workflow/status/walkerbrown/goodwrite/rule-accountability.yml?branch=main&label=rule-accountability"
+                /></a>
+                <a
+                    href="https://github.com/walkerbrown/goodwrite/actions/workflows/security.yml"
+                    ><img
+                        alt="Security"
+                        src="https://img.shields.io/github/actions/workflow/status/walkerbrown/goodwrite/security.yml?branch=main&label=security"
+                /></a>
+                <a
+                    href="https://github.com/walkerbrown/goodwrite/actions/workflows/site.yml"
+                    ><img
+                        alt="Site"
+                        src="https://img.shields.io/github/actions/workflow/status/walkerbrown/goodwrite/site.yml?branch=main&label=site"
+                /></a>
+                <a
+                    href="https://raw.githubusercontent.com/walkerbrown/goodwrite/main/.github/badges/rule_coverage.json"
+                    ><img
+                        alt="Rule coverage"
+                        src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/walkerbrown/goodwrite/main/.github/badges/rule_coverage.json"
+                /></a>
+                <a href="https://github.com/walkerbrown/goodwrite"
+                    ><img
+                        alt="License"
+                        src="https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue"
+                /></a>
+                <a href="https://github.com/walkerbrown/goodwrite"
+                    ><img
+                        alt="MSRV"
+                        src="https://img.shields.io/badge/msrv-1.85%2B-informational"
+                /></a>
+            </div>
+
+            <section class="grid">
+                <article class="card col-12">
+                    <h2>Example Output</h2>
+                    <p>
+                        Running
+                        <span class="inline-code"
+                            >goodwrite check docs/manual.md</span
+                        >:
+                    </p>
+                    <pre class="terminal-output">
+  <span class="term-err">×</span> <span class="term-bold">nominalization: prefer the verb form</span>
+   ╭─[<span class="term-file">docs/manual.md</span>:14:1]
+<span class="term-dim">14 │</span> Perform an initialization of the flight control system.
+   ·            <span class="term-err">──────┬───────</span>
+   ·                  <span class="term-err">╰──</span> ste100/nominalization
+   ╰────
+  <span class="term-help">help: STE100 §3.1 — write "initialize" instead of "initialization of"</span>
+  <span class="term-help">suggestion: replace with "Initialize the flight control system." (machine-applicable)</span>
+
+  <span class="term-warn">⚠</span> <span class="term-bold">`ECU` is a glossary synonym; prefer canonical term `controller`</span>
+   ╭─[<span class="term-file">docs/manual.md</span>:22:17]
+<span class="term-dim">22 │</span> Verify that the ECU has completed its startup sequence.
+   ·                 <span class="term-warn">─┬─</span>
+   ·                  <span class="term-warn">╰──</span> glossary/synonym-enforce
+   ╰────
+  <span class="term-help">help: replace with `controller`</span>
+  <span class="term-help">suggestion: use canonical glossary term (machine-applicable)</span>
+
+<span class="term-dim">  1 error, 1 warning</span></pre>
+                </article>
+
+                <article class="card col-6">
+                    <h3>Markdown Requirements</h3>
+                    <pre>
+&lt;!-- goodwrite:requirement --&gt;
+When the pilot presses the button,
+the system shall record the event.
+&lt;!-- goodwrite:requirement:end --&gt;
+
+&lt;!-- typed variant --&gt;
+&lt;!-- goodwrite:requirement:event-driven --&gt;
+When voltage drops below 22.0 V,
+the controller shall issue an alert.
+&lt;!-- goodwrite:requirement:end --&gt;</pre
+                    >
+                </article>
+
+                <article class="card col-6">
+                    <h3>Typst Requirements</h3>
+                    <pre>
+#requirement[
+When the pilot presses the button,
+  the system shall record the event.
+]
+
+#requirement_event[
+When voltage drops below 22.0 V,
+  the controller shall issue an alert.
+]</pre
+                    >
+                </article>
+            </section>
+        </main>
+
+        <footer class="site-footer">
+            <p>
+                goodwrite.dev • Banish ambiguity and wrongwrite from your
+                technical documentation.
+            </p>
+        </footer>
+    </body>
+</html>

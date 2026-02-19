@@ -1,0 +1,89 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-artifacts:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: tar.gz
+            cli_binary: goodwrite
+            lsp_binary: goodwrite-lsp
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive: tar.gz
+            cli_binary: goodwrite
+            lsp_binary: goodwrite-lsp
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: tar.gz
+            cli_binary: goodwrite
+            lsp_binary: goodwrite-lsp
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            archive: tar.gz
+            cli_binary: goodwrite
+            lsp_binary: goodwrite-lsp
+            cross: true
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+            cli_binary: goodwrite.exe
+            lsp_binary: goodwrite-lsp.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools
+        if: matrix.cross
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
+
+      - name: Build release binaries
+        run: cargo build --release --locked -p goodwrite-cli -p goodwrite-lsp --target ${{ matrix.target }}
+
+      - name: Package artifact (Unix)
+        if: matrix.archive == 'tar.gz'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/${{ matrix.cli_binary }} dist/
+          cp target/${{ matrix.target }}/release/${{ matrix.lsp_binary }} dist/
+          tar -C dist -czf dist/goodwrite-${{ matrix.target }}.tar.gz ${{ matrix.cli_binary }} ${{ matrix.lsp_binary }}
+          shasum -a 256 dist/goodwrite-${{ matrix.target }}.tar.gz > dist/goodwrite-${{ matrix.target }}.tar.gz.sha256
+
+      - name: Package artifact (Windows)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.cli_binary }}" "dist/${{ matrix.cli_binary }}"
+          Copy-Item "target/${{ matrix.target }}/release/${{ matrix.lsp_binary }}" "dist/${{ matrix.lsp_binary }}"
+          Compress-Archive -Path "dist/${{ matrix.cli_binary }}","dist/${{ matrix.lsp_binary }}" -DestinationPath "dist/goodwrite-${{ matrix.target }}.zip" -Force
+          $hash = (Get-FileHash "dist/goodwrite-${{ matrix.target }}.zip" -Algorithm SHA256).Hash.ToLower()
+          "$hash  goodwrite-${{ matrix.target }}.zip" | Out-File -Encoding ascii "dist/goodwrite-${{ matrix.target }}.zip.sha256"
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.zip
+            dist/*.zip.sha256

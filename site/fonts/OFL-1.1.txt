@@ -1,0 +1,5 @@
+This directory is intended for Railway Sans and FiraCode assets licensed under OFL-1.1.
+
+License text and upstream sources:
+https://github.com/googlefonts/railway-sans
+https://github.com/tonsky/FiraCode

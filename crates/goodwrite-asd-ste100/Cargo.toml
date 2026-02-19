@@ -1,0 +1,15 @@
+[package]
+name = "goodwrite-asd-ste100"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+goodwrite-core.workspace = true
+goodwrite-tokenize.workspace = true
+serde.workspace = true
+toml.workspace = true
+thiserror.workspace = true
+regex.workspace = true

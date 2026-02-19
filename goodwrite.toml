@@ -1,0 +1,22 @@
+[profiles]
+enable = ["asd-ste100", "ears", "glossary"]
+
+[requirements]
+active_rulesets = ["ears"]
+default_ruleset = "ears"
+
+[heuristics]
+strict = false
+
+[glossary]
+path = "glossary.toml"
+
+[rules]
+"asd-ste100/sentence-length-procedural" = { level = "warn", max_words = 20 }
+"asd-ste100/passive-voice" = "warn"
+"asd-ste100/semicolons" = "error"
+"ears/untestable-response" = "off"
+
+[format]
+typst = true
+markdown = true

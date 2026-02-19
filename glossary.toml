@@ -1,0 +1,10 @@
+[[terms]]
+canonical = "actuator"
+synonyms = ["servo control unit", "control unit"]
+pos = "noun"
+category = "official-parts"
+
+[[terms]]
+canonical = "touchscreen"
+pos = "noun"
+category = "computer-science"

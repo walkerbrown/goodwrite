@@ -1,0 +1,18 @@
+[package]
+name = "goodwrite-lsp"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+goodwrite-core.workspace = true
+goodwrite-extract.workspace = true
+goodwrite-tokenize.workspace = true
+goodwrite-asd-ste100.workspace = true
+goodwrite-ears.workspace = true
+goodwrite-glossary.workspace = true
+tokio.workspace = true
+tower-lsp-server = "0.23"
+serde_json.workspace = true

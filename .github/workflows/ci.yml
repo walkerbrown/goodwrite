@@ -1,0 +1,34 @@
+name: ci
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build-test-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain: ["1.85.0", "stable"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          components: rustfmt, clippy
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run core CI script
+        run: ./scripts/ci/run.sh core --channel ${{ matrix.toolchain }}
+
+      - name: Benchmark smoke (stable only)
+        if: matrix.toolchain == 'stable'
+        run: ./scripts/ci/run.sh smoke --channel stable
