@@ -61,7 +61,7 @@ body {
     background:
         radial-gradient(circle at 8% 0%, #fff9eb 0%, transparent 42%),
         radial-gradient(circle at 92% -5%, #dff0f3 0%, transparent 38%),
-        linear-gradient(180deg, var(--bg), var(--bg-deep));
+        linear-gradient(180deg, #f3efe6, #e8e3d7);
     font: 400 16px/1.6 var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
