@@ -31,7 +31,10 @@ The project offers both a CLI tool and text editor integrations to provide clipp
 ## Install
 
 ```bash
-cargo install --path crates/goodwrite-cli
+# Install via Brew -- COMING SOON
+
+# Install script
+curl -fsSL https://raw.githubusercontent.com/walkerbrown/goodwrite/main/scripts/install.sh | bash
 ```
 
 ## Quick Start
