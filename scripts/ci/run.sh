@@ -56,6 +56,7 @@ run_accountability() {
 
 run_site_check() {
   python3 scripts/export_rule_index_json.py --check
+  html5validator --root site --also-check-css
 }
 
 run_smoke() {
