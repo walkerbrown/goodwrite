@@ -43,4 +43,4 @@ pulldown-cmark = "0.10"
 typst-syntax = "0.13"
 regex = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "time", "io-std"] }
-indicatif = "0.17"
+indicatif = "0.18"

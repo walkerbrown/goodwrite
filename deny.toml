@@ -1,7 +1,5 @@
 [advisories]
 version = 2
-# TODO RUSTSEC-2025-0119 file upstream PR to move off unmaintained number_prefix 0.4.0
-ignore = ["RUSTSEC-2025-0119"]
 
 [licenses]
 version = 2
