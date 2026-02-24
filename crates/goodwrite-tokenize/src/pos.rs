@@ -78,6 +78,7 @@ pub enum PosResolution {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeterministicPosState {
     ClauseStart,
+    Neutral,
     AfterDeterminer,
     AfterModal,
     AfterPreposition,
@@ -376,9 +377,14 @@ fn apply_state_constraint(
 
 fn candidate_allowed_in_state(pos: PosClass, state: DeterministicPosState) -> bool {
     match state {
-        DeterministicPosState::ClauseStart | DeterministicPosState::AfterPunctuation => true,
+        DeterministicPosState::ClauseStart
+        | DeterministicPosState::AfterPunctuation
+        | DeterministicPosState::Neutral => true,
         DeterministicPosState::AfterDeterminer => {
-            matches!(pos, PosClass::Noun | PosClass::Adjective | PosClass::Number)
+            matches!(
+                pos,
+                PosClass::Noun | PosClass::Adjective | PosClass::Number | PosClass::Participle
+            )
         }
         DeterministicPosState::AfterModal => matches!(pos, PosClass::Verb),
         DeterministicPosState::AfterPreposition => matches!(
@@ -388,6 +394,7 @@ fn candidate_allowed_in_state(pos: PosClass, state: DeterministicPosState) -> bo
                 | PosClass::Noun
                 | PosClass::Pronoun
                 | PosClass::Number
+                | PosClass::Participle
         ),
         DeterministicPosState::AfterCopula => {
             matches!(
@@ -421,6 +428,13 @@ fn next_state(analysis: &TokenAnalysis, lower: &str) -> DeterministicPosState {
         return DeterministicPosState::ClauseStart;
     }
 
+    if matches!(
+        lower,
+        "shall" | "must" | "can" | "may" | "will" | "should" | "could" | "would"
+    ) {
+        return DeterministicPosState::AfterModal;
+    }
+
     match &analysis.resolution {
         PosResolution::Resolved(candidate) => match candidate.pos {
             PosClass::Determiner => DeterministicPosState::AfterDeterminer,
@@ -430,9 +444,9 @@ fn next_state(analysis: &TokenAnalysis, lower: &str) -> DeterministicPosState {
             PosClass::Verb if matches!(lower, "is" | "are" | "was" | "were" | "be") => {
                 DeterministicPosState::AfterCopula
             }
-            _ => DeterministicPosState::ClauseStart,
+            _ => DeterministicPosState::Neutral,
         },
-        _ => DeterministicPosState::ClauseStart,
+        _ => DeterministicPosState::Neutral,
     }
 }
 
@@ -588,5 +602,113 @@ mod tests {
             analyses[0].resolution,
             PosResolution::Ambiguous(_)
         ));
+    }
+
+    #[test]
+    fn resolves_imperative_in_procedural_mode() {
+        let mut entries = HashMap::new();
+        entries.insert(
+            "control".to_string(),
+            vec![
+                PosCandidate {
+                    lemma: "control".to_string(),
+                    pos: PosClass::Noun,
+                    source: CandidateSource::Lexicon,
+                },
+                PosCandidate {
+                    lemma: "control".to_string(),
+                    pos: PosClass::Verb,
+                    source: CandidateSource::Lexicon,
+                },
+            ],
+        );
+
+        let lexicon = TestLexicon { entries };
+        let ctx = DeterministicPosContext {
+            lexicon: &lexicon,
+            mode: Some(WritingMode::Procedural),
+        };
+
+        let analyses = analyze_tokens(&[token("control", 0)], &ctx);
+        assert!(matches!(
+            analyses[0].resolution,
+            PosResolution::Resolved(PosCandidate {
+                pos: PosClass::Verb,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn prevents_mid_sentence_imperative_bug_with_neutral_state() {
+        let mut entries = HashMap::new();
+        entries.insert(
+            "operate".to_string(),
+            vec![PosCandidate {
+                lemma: "operate".to_string(),
+                pos: PosClass::Verb,
+                source: CandidateSource::Lexicon,
+            }],
+        );
+        entries.insert(
+            "control".to_string(),
+            vec![
+                PosCandidate {
+                    lemma: "control".to_string(),
+                    pos: PosClass::Noun,
+                    source: CandidateSource::Lexicon,
+                },
+                PosCandidate {
+                    lemma: "control".to_string(),
+                    pos: PosClass::Verb,
+                    source: CandidateSource::Lexicon,
+                },
+            ],
+        );
+
+        let lexicon = TestLexicon { entries };
+        let ctx = DeterministicPosContext {
+            lexicon: &lexicon,
+            mode: Some(WritingMode::Procedural),
+        };
+
+        let analyses = analyze_tokens(&[token("Operate", 0), token("control", 8)], &ctx);
+        // Operate is Verb. Next state is Neutral. So "control" shouldn't be forced to Verb.
+        assert!(matches!(
+            analyses[1].resolution,
+            PosResolution::Ambiguous(_)
+        ));
+    }
+
+    #[test]
+    fn complex_sentence_allows_participles_after_prepositions() {
+        let entries = HashMap::new();
+        let lexicon = TestLexicon { entries };
+        let ctx = DeterministicPosContext {
+            lexicon: &lexicon,
+            mode: Some(WritingMode::Descriptive),
+        };
+
+        // "for making"
+        let analyses = analyze_tokens(&[token("for", 0), token("making", 4)], &ctx);
+        let second = &analyses[1];
+
+        // Ensure making hasn't fallen back to Unresolved. It should have only Participle variant remaining.
+        assert!(matches!(
+            second.resolution,
+            PosResolution::Resolved(PosCandidate {
+                pos: PosClass::Participle,
+                ..
+            })
+        ));
+
+        let has_participle = second
+            .candidates
+            .iter()
+            .any(|c| c.pos == PosClass::Participle);
+        assert!(
+            has_participle,
+            "missing participle candidate after preposition"
+        );
     }
 }

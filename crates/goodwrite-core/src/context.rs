@@ -4,15 +4,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::GoodwriteConfig;
 
-/// Glossary term from glossary profile.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GlossaryTerm {
-    pub canonical: String,
-    pub synonyms: Vec<String>,
-    pub pos: Option<String>,
-    pub category: Option<String>,
-}
-
 /// One glossary alternative entry, mirroring glossary.toml shape.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GlossaryAlternative {
@@ -58,53 +49,43 @@ pub struct GlossaryFileData {
     pub approved: Vec<GlossaryApprovedEntry>,
     #[serde(default, rename = "not_approved")]
     pub not_approved: Vec<GlossaryNotApprovedEntry>,
-    #[serde(default)]
-    pub terms: Vec<GlossaryTerm>,
 }
 
 /// In-memory glossary lookups shared with rules.
 #[derive(Debug, Clone, Default)]
 pub struct GlossaryData {
-    terms: Vec<GlossaryTerm>,
+    approved: Vec<GlossaryApprovedEntry>,
+    not_approved: Vec<GlossaryNotApprovedEntry>,
     canonicals: HashSet<String>,
-    synonyms: Vec<(String, String)>,
 }
 
 impl GlossaryData {
-    pub fn new(terms: Vec<GlossaryTerm>) -> Self {
-        let canonicals = terms
+    pub fn new(
+        approved: Vec<GlossaryApprovedEntry>,
+        not_approved: Vec<GlossaryNotApprovedEntry>,
+    ) -> Self {
+        let canonicals = approved
             .iter()
-            .map(|term| term.canonical.to_ascii_lowercase())
+            .map(|entry| entry.word.to_ascii_lowercase())
             .collect::<HashSet<_>>();
 
-        let mut synonyms = Vec::new();
-        for term in &terms {
-            for synonym in &term.synonyms {
-                synonyms.push((synonym.to_ascii_lowercase(), term.canonical.clone()));
-            }
-        }
-
         Self {
-            terms,
+            approved,
+            not_approved,
             canonicals,
-            synonyms,
         }
     }
 
-    pub fn terms(&self) -> &[GlossaryTerm] {
-        &self.terms
+    pub fn approved(&self) -> &[GlossaryApprovedEntry] {
+        &self.approved
+    }
+
+    pub fn not_approved(&self) -> &[GlossaryNotApprovedEntry] {
+        &self.not_approved
     }
 
     pub fn has_term(&self, word: &str) -> bool {
         self.canonicals.contains(&word.to_ascii_lowercase())
-    }
-
-    pub fn canonical_for_synonym(&self, value: &str) -> Option<&str> {
-        let lower = value.to_ascii_lowercase();
-        self.synonyms
-            .iter()
-            .find(|(synonym, _)| synonym == &lower)
-            .map(|(_, canonical)| canonical.as_str())
     }
 }
 

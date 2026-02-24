@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+remote="$1"
+url="$2"
+
+while read -r local_ref local_oid remote_ref remote_oid; do
+    if [[ "$remote_ref" == "refs/heads/main" || "$remote_ref" == "main" ]]; then
+        echo "Gating push to main on passing all CI checks..."
+        ./scripts/ci/run.sh full
+    fi
+done

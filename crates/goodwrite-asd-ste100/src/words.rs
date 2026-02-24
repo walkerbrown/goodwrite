@@ -516,20 +516,15 @@ impl Rule for TechnicalNounAsVerbRule {
                     continue;
                 }
 
-                let Some(term) = glossary
-                    .terms()
+                let Some(entry) = glossary
+                    .approved()
                     .iter()
-                    .find(|term| term.canonical.eq_ignore_ascii_case(&word))
+                    .find(|entry| entry.word.eq_ignore_ascii_case(&word))
                 else {
                     continue;
                 };
 
-                if !term
-                    .pos
-                    .as_deref()
-                    .unwrap_or_default()
-                    .eq_ignore_ascii_case("noun")
-                {
+                if !entry.pos.eq_ignore_ascii_case("noun") {
                     continue;
                 }
 
@@ -537,10 +532,7 @@ impl Rule for TechnicalNounAsVerbRule {
                     Diagnostic::new(
                         self.id(),
                         self.default_severity(),
-                        format!(
-                            "technical noun `{}` appears in verb position",
-                            term.canonical
-                        ),
+                        format!("technical noun `{}` appears in verb position", entry.word),
                         pair[1].range,
                     )
                     .with_note("ASD-STE100 Rule 1.7")
@@ -637,39 +629,47 @@ impl Rule for TechnicalNounLengthRule {
         let lower = input.span.text.to_ascii_lowercase();
         let mut diagnostics = Vec::new();
 
-        for term in glossary.terms() {
-            let mut candidates = Vec::new();
-            candidates.push(term.canonical.to_ascii_lowercase());
-            candidates.extend(term.synonyms.iter().map(|value| value.to_ascii_lowercase()));
+        let mut all_words = Vec::new();
+        all_words.extend(
+            glossary
+                .approved()
+                .iter()
+                .map(|e| e.word.to_ascii_lowercase()),
+        );
+        all_words.extend(
+            glossary
+                .not_approved()
+                .iter()
+                .map(|e| e.word.to_ascii_lowercase()),
+        );
 
-            for candidate in candidates {
-                let words = candidate.split_whitespace().count();
-                if words <= 3 {
-                    continue;
-                }
+        for candidate in all_words {
+            let words = candidate.split_whitespace().count();
+            if words <= 3 {
+                continue;
+            }
 
-                let mut matches = find_token_boundary_matches(&lower, &candidate);
-                if matches.is_empty() {
-                    // Multi-word technical terms can be tokenized with punctuation or
-                    // formatting around them; fallback to substring matching so the
-                    // glossary-driven phrase still gets flagged.
-                    if let Some(start) = lower.find(&candidate) {
-                        matches.push((start, start + candidate.len()));
-                    }
+            let mut matches = find_token_boundary_matches(&lower, &candidate);
+            if matches.is_empty() {
+                // Multi-word technical terms can be tokenized with punctuation or
+                // formatting around them; fallback to substring matching so the
+                // glossary-driven phrase still gets flagged.
+                if let Some(start) = lower.find(&candidate) {
+                    matches.push((start, start + candidate.len()));
                 }
+            }
 
-                for (start, end) in matches {
-                    diagnostics.push(
-                        Diagnostic::new(
-                            self.id(),
-                            self.default_severity(),
-                            format!("technical noun phrase has {words} words"),
-                            absolute_range(input, start, end),
-                        )
-                        .with_note("ASD-STE100 Rule 1.9")
-                        .with_help("reduce to three words or fewer"),
-                    );
-                }
+            for (start, end) in matches {
+                diagnostics.push(
+                    Diagnostic::new(
+                        self.id(),
+                        self.default_severity(),
+                        format!("technical noun phrase has {words} words"),
+                        absolute_range(input, start, end),
+                    )
+                    .with_note("ASD-STE100 Rule 1.9")
+                    .with_help("reduce to three words or fewer"),
+                );
             }
         }
 
@@ -771,28 +771,31 @@ impl Rule for ConsistentTechnicalNounRule {
 
         let lower = input.span.text.to_ascii_lowercase();
         let mut diagnostics = Vec::new();
-        for term in glossary.terms() {
-            let canonical = term.canonical.to_ascii_lowercase();
-            if find_token_boundary_matches(&lower, &canonical).is_empty() {
+        for entry in glossary.not_approved() {
+            let synonym_lower = entry.word.to_ascii_lowercase();
+            let synonym_matches = find_token_boundary_matches(&lower, &synonym_lower);
+            if synonym_matches.is_empty() {
                 continue;
             }
 
-            for synonym in &term.synonyms {
-                let synonym_lower = synonym.to_ascii_lowercase();
-                for (start, end) in find_token_boundary_matches(&lower, &synonym_lower) {
-                    diagnostics.push(
-                        Diagnostic::new(
-                            self.id(),
-                            self.default_severity(),
-                            format!(
-                                "both `{}` and synonym `{}` appear in same context",
-                                term.canonical, synonym
-                            ),
-                            absolute_range(input, start, end),
-                        )
-                        .with_note("ASD-STE100 Rule 1.11")
-                        .with_help(format!("prefer `{}` consistently", term.canonical)),
-                    );
+            for alt in &entry.alternatives {
+                let canonical = alt.word.to_ascii_lowercase();
+                if !find_token_boundary_matches(&lower, &canonical).is_empty() {
+                    for (start, end) in &synonym_matches {
+                        diagnostics.push(
+                            Diagnostic::new(
+                                self.id(),
+                                self.default_severity(),
+                                format!(
+                                    "both `{}` and synonym `{}` appear in same context",
+                                    alt.word, entry.word
+                                ),
+                                absolute_range(input, *start, *end),
+                            )
+                            .with_note("ASD-STE100 Rule 1.11")
+                            .with_help(format!("prefer `{}` consistently", alt.word)),
+                        );
+                    }
                 }
             }
         }
@@ -818,73 +821,32 @@ impl Rule for TechnicalVerbCategoryRule {
         Severity::Info
     }
 
-    fn check(&self, input: &RuleInput, ctx: &CheckContext) -> Vec<Diagnostic> {
-        let Some(glossary) = ctx.glossary.as_ref() else {
-            return Vec::new();
-        };
+    fn check(&self, input: &RuleInput, _ctx: &CheckContext) -> Vec<Diagnostic> {
+        let mut diagnostics = Vec::new();
 
-        let lower = input.span.text.to_ascii_lowercase();
-        let mut diagnostics = glossary
-            .terms()
-            .iter()
-            .filter(|term| {
-                term.pos
-                    .as_deref()
-                    .map(str::trim)
-                    .unwrap_or_default()
-                    .eq_ignore_ascii_case("verb")
-            })
-            .filter(|term| {
-                term.category
-                    .as_deref()
-                    .map(str::trim)
-                    .unwrap_or_default()
-                    .is_empty()
-            })
-            .filter_map(|term| {
-                let canonical = term.canonical.to_ascii_lowercase();
-                let start = find_token_boundary_matches(&lower, &canonical)
-                    .into_iter()
-                    .next()
-                    .map(|(idx, _)| idx)
-                    .or_else(|| lower.find(&canonical))?;
-                Some(
+        for sentence in &input.sentences {
+            for pair in sentence.tokens.windows(2) {
+                let prev = pair[0].text.to_ascii_lowercase();
+                let word = pair[1].text.to_ascii_lowercase();
+                if !matches!(prev.as_str(), "shall" | "must" | "can" | "may") {
+                    continue;
+                }
+                if !word.ends_with("ate") {
+                    continue;
+                }
+                diagnostics.push(
                     Diagnostic::new(
                         self.id(),
                         self.default_severity(),
-                        format!("technical verb `{}` has no category", term.canonical),
-                        absolute_range(input, start, start + term.canonical.len()),
+                        format!("technical verb `{}` has no category", pair[1].text),
+                        pair[1].range,
                     )
                     .with_note("ASD-STE100 Rule 1.12"),
-                )
-            })
-            .collect::<Vec<_>>();
-
-        if diagnostics.is_empty() {
-            for sentence in &input.sentences {
-                for pair in sentence.tokens.windows(2) {
-                    let prev = pair[0].text.to_ascii_lowercase();
-                    let word = pair[1].text.to_ascii_lowercase();
-                    if !matches!(prev.as_str(), "shall" | "must" | "can" | "may") {
-                        continue;
-                    }
-                    if !word.ends_with("ate") {
-                        continue;
-                    }
-                    diagnostics.push(
-                        Diagnostic::new(
-                            self.id(),
-                            self.default_severity(),
-                            format!("technical verb `{}` has no category", pair[1].text),
-                            pair[1].range,
-                        )
-                        .with_note("ASD-STE100 Rule 1.12"),
-                    );
-                    break;
-                }
-                if !diagnostics.is_empty() {
-                    break;
-                }
+                );
+                break;
+            }
+            if !diagnostics.is_empty() {
+                break;
             }
         }
 
@@ -926,14 +888,9 @@ impl Rule for TechnicalVerbAsNounRule {
                     .text
                     .trim_matches(|ch: char| !ch.is_ascii_alphanumeric() && ch != '-')
                     .to_ascii_lowercase();
-                let is_glossary_verb = glossary.terms().iter().any(|term| {
-                    term.canonical.eq_ignore_ascii_case(&candidate)
-                        && term
-                            .pos
-                            .as_deref()
-                            .map(str::trim)
-                            .unwrap_or_default()
-                            .eq_ignore_ascii_case("verb")
+                let is_glossary_verb = glossary.approved().iter().any(|entry| {
+                    entry.word.eq_ignore_ascii_case(&candidate)
+                        && entry.pos.eq_ignore_ascii_case("verb")
                 });
                 let is_verb_like_fallback = candidate.ends_with("ate");
 
@@ -1102,33 +1059,42 @@ fn find_token_boundary_matches(haystack: &str, needle: &str) -> Vec<(usize, usiz
 mod tests {
     use super::{TechnicalNounLengthRule, TechnicalVerbAsNounRule, TechnicalVerbCategoryRule};
     use goodwrite_core::{
-        CheckContext, GlossaryData, GlossaryTerm, GoodwriteConfig, ProseSpan, Rule, RuleInput,
-        SourceRange, SpanAnnotations,
+        CheckContext, GlossaryData, GoodwriteConfig, ProseSpan, Rule, RuleInput, SourceRange,
+        SpanAnnotations,
     };
 
     fn context_with_glossary() -> CheckContext {
         CheckContext {
             config: GoodwriteConfig::default(),
-            glossary: Some(GlossaryData::new(vec![
-                GlossaryTerm {
-                    canonical: "calibrate".to_string(),
-                    synonyms: Vec::new(),
-                    pos: Some("verb".to_string()),
-                    category: None,
-                },
-                GlossaryTerm {
-                    canonical: "control".to_string(),
-                    synonyms: Vec::new(),
-                    pos: Some("verb".to_string()),
-                    category: Some("technical-verb".to_string()),
-                },
-                GlossaryTerm {
-                    canonical: "high pressure fuel shutoff valve".to_string(),
-                    synonyms: Vec::new(),
-                    pos: Some("noun".to_string()),
-                    category: Some("official-parts".to_string()),
-                },
-            ])),
+            glossary: Some(GlossaryData::new(
+                vec![
+                    goodwrite_core::GlossaryApprovedEntry {
+                        word: "calibrate".to_string(),
+                        pos: "verb".to_string(),
+                        forms: Vec::new(),
+                        approved_meaning: String::new(),
+                        goodwrite_example: String::new(),
+                        wrongwrite_example: String::new(),
+                    },
+                    goodwrite_core::GlossaryApprovedEntry {
+                        word: "control".to_string(),
+                        pos: "verb".to_string(),
+                        forms: Vec::new(),
+                        approved_meaning: String::new(),
+                        goodwrite_example: String::new(),
+                        wrongwrite_example: String::new(),
+                    },
+                    goodwrite_core::GlossaryApprovedEntry {
+                        word: "high pressure fuel shutoff valve".to_string(),
+                        pos: "noun".to_string(),
+                        forms: Vec::new(),
+                        approved_meaning: String::new(),
+                        goodwrite_example: String::new(),
+                        wrongwrite_example: String::new(),
+                    },
+                ],
+                Vec::new(),
+            )),
             glossary_data: None,
             file_has_mode_annotations: true,
         }

@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -80,10 +80,29 @@ class TableParser:
 
     def split_line(self, line: str) -> tuple[str, str, str, str]:
         self._update_columns(line)
-        c1 = line[: self.col2].strip()
-        c2 = line[self.col2 : self.col3].strip()
-        c3 = line[self.col3 : self.col4].strip()
-        c4 = line[self.col4 :].strip()
+        line = line.ljust(self.col4 + 10)
+        
+        col2 = self.col2
+        col3 = self.col3
+        col4 = self.col4
+
+        if line[col2 - 1] != " " or line[col2] != " ":
+            m = re.search(r"\)\s+(?=[A-Z])", line[:col3])
+            if m:
+                col2 = m.end()
+            else:
+                m = re.search(r"\s{2,}", line[:col3])
+                if m and m.end() < col3:
+                    col2 = m.end()
+                else:
+                    m = re.search(r"(?<=\S)\s+(?=[A-Z][a-z])", line[:col3])
+                    if m:
+                        col2 = m.end()
+
+        c1 = line[:col2].strip()
+        c2 = line[col2:col3].strip()
+        c3 = line[col3:col4].strip()
+        c4 = line[col4:].strip()
 
         # If a list marker leaked into column 1, move it back to column 2.
         leaked = re.match(r"^(.*\([^)]+\),?)\s+(\d+)$", c1)
@@ -112,20 +131,24 @@ class TableParser:
         return c1, c2, c3, c4
 
 
-def extract_text(pdf: Path, first_page: int, last_page: int) -> str:
-    cmd = [
-        "gs",
-        "-q",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-sDEVICE=txtwrite",
-        f"-dFirstPage={first_page}",
-        f"-dLastPage={last_page}",
-        "-sOutputFile=-",
-        str(pdf),
-    ]
-    completed = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    return completed.stdout
+def extract_text(pdf_path: Path, first_page: int, last_page: int) -> str:
+    try:
+        import pdftotext  # type: ignore
+    except ImportError:
+        print("ERROR: Missing required Python package 'pdftotext'.")
+        print("Please install it by running: pip install pdftotext")
+        sys.exit(1)
+
+    with open(pdf_path, "rb") as f:
+        pdf = pdftotext.PDF(f, physical=True)
+
+    text = []
+    # pdftotext is 0-indexed, whereas PDF pages are 1-indexed
+    for page_idx in range(first_page - 1, last_page):
+        if page_idx < len(pdf):
+            text.append(pdf[page_idx])
+
+    return "\n".join(text)
 
 
 def is_header_or_footer(line: str) -> bool:
@@ -485,8 +508,8 @@ def validate_entries(entries: List[ParsedEntry]) -> None:
             raise ValueError("entry with empty word field found")
         if not entry.pos.strip():
             raise ValueError(f"entry `{entry.word}` has empty part-of-speech")
-        if not entry.approved and not entry.alternatives:
-            raise ValueError(f"not-approved entry `{entry.word}` has no alternatives")
+        if not entry.approved and not entry.alternatives and not entry.c2.strip():
+            raise ValueError(f"not-approved entry `{entry.word}` has no alternatives and no guidance")
 
 
 def main() -> None:

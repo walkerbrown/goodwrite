@@ -1,5 +1,8 @@
-[[terms]]
-canonical = "actuator"
-synonyms = ["control unit"]
+[[approved]]
+word = "actuator"
 pos = "noun"
-category = "official-parts"
+
+[[not_approved]]
+word = "control unit"
+pos = "noun"
+alternatives = [{ word = "actuator" }]

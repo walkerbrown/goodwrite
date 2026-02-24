@@ -63,7 +63,7 @@ impl Rule for UndefinedTermRule {
                         ),
                     )
                     .with_help(
-                        "add the term to glossary.toml [[terms]] or use a defined canonical term",
+                        "add the term to glossary.toml [[approved]] or use a defined canonical term",
                     ),
                 );
             }
@@ -98,35 +98,43 @@ impl Rule for SynonymRule {
         let lower_text = input.span.text.to_ascii_lowercase();
         let mut diagnostics = Vec::new();
 
-        for term in glossary.terms() {
-            for synonym in &term.synonyms {
-                let synonym_lower = synonym.to_ascii_lowercase();
-                for start in find_all_token_boundary(&lower_text, &synonym_lower) {
-                    let end = start + synonym_lower.len();
-                    let absolute = goodwrite_core::SourceRange::new(
-                        input.span.range.start + start,
-                        input.span.range.start + end,
-                    );
+        for entry in glossary.not_approved() {
+            let synonym_lower = entry.word.to_ascii_lowercase();
+            for start in find_all_token_boundary(&lower_text, &synonym_lower) {
+                let end = start + synonym_lower.len();
+                let absolute = goodwrite_core::SourceRange::new(
+                    input.span.range.start + start,
+                    input.span.range.start + end,
+                );
 
-                    diagnostics.push(
-                        Diagnostic::new(
-                            self.id(),
-                            self.default_severity(),
-                            format!(
-                                "`{}` is a glossary synonym; prefer canonical term `{}`",
-                                synonym, term.canonical
-                            ),
-                            absolute,
-                        )
-                        .with_help(format!("replace with `{}`", term.canonical))
-                        .with_suggestion(Suggestion {
-                            span: absolute,
-                            replacement: term.canonical.clone(),
-                            applicability: Applicability::MachineApplicable,
-                            message: "use canonical glossary term".to_string(),
-                        }),
-                    );
+                let canonical = entry
+                    .alternatives
+                    .first()
+                    .map(|alt| alt.word.clone())
+                    .unwrap_or_else(String::new);
+
+                if canonical.is_empty() {
+                    continue;
                 }
+
+                diagnostics.push(
+                    Diagnostic::new(
+                        self.id(),
+                        self.default_severity(),
+                        format!(
+                            "`{}` is a glossary synonym; prefer canonical term `{}`",
+                            entry.word, canonical
+                        ),
+                        absolute,
+                    )
+                    .with_help(format!("replace with `{}`", canonical))
+                    .with_suggestion(Suggestion {
+                        span: absolute,
+                        replacement: canonical.clone(),
+                        applicability: Applicability::MachineApplicable,
+                        message: "use canonical glossary term".to_string(),
+                    }),
+                );
             }
         }
 
@@ -157,14 +165,14 @@ impl Rule for CasingRule {
         };
 
         let mut diagnostics = Vec::new();
-        for term in glossary.terms() {
-            let canonical_lower = term.canonical.to_ascii_lowercase();
+        for entry in glossary.approved() {
+            let canonical_lower = entry.word.to_ascii_lowercase();
             let text_lower = input.span.text.to_ascii_lowercase();
 
             for start in find_all_token_boundary(&text_lower, &canonical_lower) {
                 let end = start + canonical_lower.len();
                 let found = &input.span.text[start..end];
-                if found == term.canonical {
+                if found == entry.word {
                     continue;
                 }
 
@@ -177,12 +185,12 @@ impl Rule for CasingRule {
                     Diagnostic::new(
                         self.id(),
                         self.default_severity(),
-                        format!("use canonical casing `{}`", term.canonical),
+                        format!("use canonical casing `{}`", entry.word),
                         absolute,
                     )
                     .with_suggestion(Suggestion {
                         span: absolute,
-                        replacement: term.canonical.clone(),
+                        replacement: entry.word.clone(),
                         applicability: Applicability::MachineApplicable,
                         message: "normalize glossary casing".to_string(),
                     }),

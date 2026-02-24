@@ -288,9 +288,12 @@ fn analyze_files(
         .iter()
         .any(|profile| profile.eq_ignore_ascii_case("glossary"))
         .then(|| {
-            glossary_data
-                .as_ref()
-                .map(|loaded| goodwrite_core::GlossaryData::new(loaded.terms.clone()))
+            glossary_data.as_ref().map(|loaded| {
+                goodwrite_core::GlossaryData::new(
+                    loaded.approved.clone(),
+                    loaded.not_approved.clone(),
+                )
+            })
         })
         .flatten();
 

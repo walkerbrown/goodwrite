@@ -5,6 +5,9 @@ debug
 *.pdb
 **/mutants.out*/
 
+# Python
+__pycache__/
+
 # This project does not distribute the ASD-STE100 standard itself,
 # which can be obtained free of charge at https://www.asd-ste100.org
 ASD-STE100_ISSUE9.pdf

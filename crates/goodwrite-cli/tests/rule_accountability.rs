@@ -201,33 +201,34 @@ fn unique_stamp() -> u128 {
     (now << 32) ^ (pid << 16) ^ seq
 }
 
-const USER_DICTIONARY_FIXTURE: &str = r#"[[terms]]
-canonical = "actuator"
-synonyms = ["control unit"]
-pos = "noun"
-category = "official-parts"
-
-[[terms]]
-canonical = "system"
-synonyms = ["controller"]
-pos = "noun"
-category = "official-parts"
-
-[[terms]]
-canonical = "control"
-pos = "verb"
-category = "technical-verb"
-
-[[terms]]
-canonical = "widget"
+const USER_DICTIONARY_FIXTURE: &str = r#"[[approved]]
+word = "actuator"
 pos = "noun"
 
-[[terms]]
-canonical = "calibrate"
-pos = "verb"
-
-[[terms]]
-canonical = "high pressure fuel shutoff valve"
+[[not_approved]]
+word = "control unit"
 pos = "noun"
-category = "official-parts"
+alternatives = [{ word = "actuator" }]
+
+[[approved]]
+word = "gizmo"
+pos = "noun"
+
+[[not_approved]]
+word = "controller"
+pos = "noun"
+alternatives = [{ word = "gizmo" }]
+
+[[approved]]
+word = "NASA"
+pos = "noun"
+
+[[approved]]
+word = "Telemetry Control Bus"
+pos = "noun"
+
+[[not_approved]]
+word = "TCB"
+pos = "noun"
+alternatives = [{ word = "Telemetry Control Bus" }]
 "#;

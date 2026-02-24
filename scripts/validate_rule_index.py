@@ -7,6 +7,7 @@ import pathlib
 import re
 import sys
 import tomllib
+import typing
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -39,7 +40,7 @@ ASD_SECTION_EXPECTATIONS = {
 }
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> typing.NoReturn:
     print(f"rule-index validation failed: {message}", file=sys.stderr)
     raise SystemExit(1)
 

@@ -7,6 +7,7 @@ import json
 import pathlib
 import subprocess
 import tomllib
+import typing
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -24,7 +25,13 @@ DEFAULTS = {
 }
 
 
-def load_registered_rules() -> list[dict[str, object]]:
+class RuleData(typing.TypedDict, total=False):
+    id: str
+    name: str
+    profiles: list[str]
+
+
+def load_registered_rules() -> list[RuleData]:
     completed = subprocess.run(
         ["cargo", "run", "-q", "-p", "goodwrite-cli", "--", "list-rules", "--format", "json"],
         cwd=ROOT,
@@ -32,7 +39,8 @@ def load_registered_rules() -> list[dict[str, object]]:
         capture_output=True,
         text=True,
     )
-    return json.loads(completed.stdout)
+    raw = json.loads(completed.stdout)
+    return typing.cast(list[RuleData], raw)
 
 
 def load_existing() -> dict[str, dict[str, str]]:

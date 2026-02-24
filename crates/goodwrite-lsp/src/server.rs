@@ -108,9 +108,12 @@ impl GoodwriteServer {
             .iter()
             .any(|profile| profile.eq_ignore_ascii_case("glossary"))
             .then(|| {
-                glossary_data
-                    .as_ref()
-                    .map(|loaded| goodwrite_core::GlossaryData::new(loaded.terms.clone()))
+                glossary_data.as_ref().map(|loaded| {
+                    goodwrite_core::GlossaryData::new(
+                        loaded.approved.clone(),
+                        loaded.not_approved.clone(),
+                    )
+                })
             })
             .flatten();
         let ruleset = build_ruleset(&config);
@@ -212,7 +215,15 @@ impl LanguageServer for GoodwriteServer {
                     TextDocumentSyncKind::FULL,
                 )),
                 code_action_provider: Some(
-                    tower_lsp_server::ls_types::CodeActionProviderCapability::Simple(true),
+                    tower_lsp_server::ls_types::CodeActionProviderCapability::Options(
+                        tower_lsp_server::ls_types::CodeActionOptions {
+                            code_action_kinds: Some(vec![
+                                tower_lsp_server::ls_types::CodeActionKind::QUICKFIX,
+                            ]),
+                            work_done_progress_options: Default::default(),
+                            resolve_provider: Some(false),
+                        },
+                    ),
                 ),
                 ..ServerCapabilities::default()
             },

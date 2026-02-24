@@ -28,12 +28,19 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT_DIR"
 
 run_core() {
-  cargo build --workspace --locked
-  cargo test --workspace --locked
+  echo "--> Building workspace..."
+  cargo build -q --workspace --locked
+  
+  echo "--> Running tests..."
+  # Explicitly run lib, tests, and bins to suppress empty Doc-tests output
+  cargo test -q --workspace --locked --lib --tests --bins
 
   if [[ "$CHANNEL" == "stable" ]]; then
+    echo "--> Checking formatting..."
     cargo fmt --all -- --check
-    cargo clippy --workspace --all-targets -- -D warnings
+    
+    echo "--> Running clippy..."
+    cargo clippy -q --workspace --all-targets -- -D warnings
   fi
 }
 
@@ -56,7 +63,12 @@ run_accountability() {
 
 run_site_check() {
   python3 scripts/export_rule_index_json.py --check
-  html5validator --root site --also-check-css
+
+  if ! uv run --with html5validator html5validator --root site --also-check-css; then
+    echo "ERROR: html5validator failed." >&2
+    echo "If you saw a Java-related error above, please install a Java runtime (e.g. 'brew install openjdk' or 'sudo apt-get install default-jre')" >&2
+    exit 1
+  fi
 }
 
 run_smoke() {
@@ -66,12 +78,17 @@ run_smoke() {
   rm -rf "$install_root"
 
   if [[ "$OFFLINE" -eq 1 ]]; then
-    cargo install --path crates/goodwrite-cli --locked --offline --root "$install_root"
+    cargo install --quiet --path crates/goodwrite-cli --locked --offline --root "$install_root"
   else
-    cargo install --path crates/goodwrite-cli --locked --root "$install_root"
+    cargo install --quiet --path crates/goodwrite-cli --locked --root "$install_root"
   fi
 
   "$install_root/bin/goodwrite" --help >/dev/null
+}
+
+run_python() {
+  uv run ruff check scripts/ crates/goodwrite-asd-ste100/scripts/
+  uv run ty check scripts/ crates/goodwrite-asd-ste100/scripts/
 }
 
 case "$MODE" in
@@ -87,15 +104,19 @@ case "$MODE" in
   smoke)
     run_smoke
     ;;
+  python)
+    run_python
+    ;;
   full)
     run_core
+    run_python
     run_accountability
     run_site_check
     run_smoke
     ;;
   *)
     echo "unknown mode: $MODE" >&2
-    echo "valid modes: core | accountability | site | smoke | full" >&2
+    echo "valid modes: core | accountability | site | smoke | python | full" >&2
     exit 2
     ;;
 esac

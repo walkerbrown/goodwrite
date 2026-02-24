@@ -462,7 +462,6 @@ fn push_pos_candidate(
 mod tests {
     use goodwrite_core::{
         GlossaryAlternative, GlossaryApprovedEntry, GlossaryFileData, GlossaryNotApprovedEntry,
-        GlossaryTerm,
     };
 
     use super::DictionaryLookup;
@@ -479,7 +478,6 @@ mod tests {
                 wrongwrite_example: String::new(),
             }],
             not_approved: Vec::new(),
-            terms: Vec::new(),
         };
 
         let result = DictionaryLookup::validate_overlay_against_embedded(&overlay);
@@ -498,7 +496,6 @@ mod tests {
                 wrongwrite_example: String::new(),
             }],
             not_approved: Vec::new(),
-            terms: Vec::new(),
         };
 
         let result = DictionaryLookup::validate_overlay_against_embedded(&overlay);
@@ -527,12 +524,6 @@ mod tests {
                 approved_meaning: String::new(),
                 goodwrite_example: String::new(),
                 wrongwrite_example: String::new(),
-            }],
-            terms: vec![GlossaryTerm {
-                canonical: "Telemetry Control Bus".to_string(),
-                synonyms: vec!["TCB".to_string()],
-                pos: Some("noun".to_string()),
-                category: Some("hardware".to_string()),
             }],
         };
 

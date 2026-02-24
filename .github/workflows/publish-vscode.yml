@@ -29,6 +29,7 @@ jobs:
 
       - name: Publish extension
         working-directory: editors/vscode
-        run: npx @vscode/vsce publish
+        # Temporarily disabled until 0.1 release
+        run: echo "Publishing is disabled until v0.1.0 release" # npx @vscode/vsce publish
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}

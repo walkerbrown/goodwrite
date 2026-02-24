@@ -1,10 +1,26 @@
-[[terms]]
-canonical = "actuator"
-synonyms = ["servo control unit", "control unit"]
-pos = "noun"
-category = "official-parts"
+# [[approved]]
+# word = "example word"
+# pos = "noun"
 
-[[terms]]
-canonical = "touchscreen"
+# [[not_approved]]
+# word = "bad word"
+# pos = "noun"
+# alternatives = [{ word = "example word" }]
+
+[[approved]]
+word = "actuator"
 pos = "noun"
-category = "computer-science"
+
+[[not_approved]]
+word = "servo control unit"
+pos = "noun"
+alternatives = [{ word = "actuator" }]
+
+[[not_approved]]
+word = "control unit"
+pos = "noun"
+alternatives = [{ word = "actuator" }]
+
+[[approved]]
+word = "touchscreen"
+pos = "noun"

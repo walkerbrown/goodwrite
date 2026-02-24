@@ -112,11 +112,14 @@ path = "glossary.toml"
     );
     let _glossary = workspace.write(
         "glossary.toml",
-        r#"[[terms]]
-canonical = "actuator"
-synonyms = ["control unit"]
+        r#"[[approved]]
+word = "actuator"
 pos = "noun"
-category = "official-parts"
+
+[[not_approved]]
+word = "control unit"
+pos = "noun"
+alternatives = [{ word = "actuator" }]
 "#,
     );
     let input = workspace.write(
@@ -148,11 +151,14 @@ path = "glossary.toml"
     );
     let _glossary = workspace.write(
         "glossary.toml",
-        r#"[[terms]]
-canonical = "actuator"
-synonyms = ["control unit"]
+        r#"[[approved]]
+word = "actuator"
 pos = "noun"
-category = "official-parts"
+
+[[not_approved]]
+word = "control unit"
+pos = "noun"
+alternatives = [{ word = "actuator" }]
 "#,
     );
     let input = workspace.write("requirements.md", "The MFMU starts when requested.\n");
@@ -181,10 +187,9 @@ path = "glossary.toml"
     );
     let _glossary = workspace.write(
         "glossary.toml",
-        r#"[[terms]]
-canonical = "control"
-pos = "verb"
-category = "technical-verb"
+        r#"[[approved]]
+word = "actuator"
+pos = "noun"
 "#,
     );
     let input = workspace.write(
@@ -220,10 +225,9 @@ path = "glossary.toml"
     );
     let _glossary = workspace.write(
         "glossary.toml",
-        r#"[[terms]]
-canonical = "control"
-pos = "verb"
-category = "technical-verb"
+        r#"[[approved]]
+word = "actuator"
+pos = "noun"
 "#,
     );
 

@@ -391,20 +391,11 @@ fn technical_noun_or_verb(glossary: Option<&GlossaryData>, lower: &str) -> bool 
     glossary
         .and_then(|loaded| {
             loaded
-                .terms()
+                .approved()
                 .iter()
-                .find(|term| term.canonical.eq_ignore_ascii_case(lower))
+                .find(|entry| entry.word.eq_ignore_ascii_case(lower))
         })
-        .is_some_and(|term| {
-            matches!(
-                term.pos
-                    .as_deref()
-                    .unwrap_or_default()
-                    .to_ascii_lowercase()
-                    .as_str(),
-                "noun" | "verb"
-            )
-        })
+        .is_some_and(|entry| matches!(entry.pos.to_ascii_lowercase().as_str(), "noun" | "verb"))
 }
 
 fn looks_glossary_candidate(token: &str) -> bool {
@@ -452,16 +443,12 @@ impl PosLexiconProvider for ComplianceLexicon<'_> {
         }
 
         if let Some(glossary) = self.glossary {
-            for term in glossary.terms() {
-                if !term.canonical.eq_ignore_ascii_case(&lower) {
+            for entry in glossary.approved() {
+                if !entry.word.eq_ignore_ascii_case(&lower) {
                     continue;
                 }
 
-                let pos = term
-                    .pos
-                    .as_deref()
-                    .and_then(PosClass::from_dictionary_tag)
-                    .unwrap_or(PosClass::Noun);
+                let pos = PosClass::from_dictionary_tag(&entry.pos).unwrap_or(PosClass::Noun);
 
                 candidates.push(PosCandidate {
                     lemma: lower.clone(),
@@ -478,7 +465,7 @@ impl PosLexiconProvider for ComplianceLexicon<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use goodwrite_core::{GlossaryData, GlossaryTerm, GoodwriteConfig, SourceRange};
+    use goodwrite_core::{GoodwriteConfig, SourceRange};
 
     fn token(text: &str, start: usize) -> Token {
         Token {
@@ -507,15 +494,6 @@ mod tests {
         CheckContext {
             config: GoodwriteConfig::default(),
             glossary: None,
-            glossary_data: None,
-            file_has_mode_annotations: true,
-        }
-    }
-
-    fn context_with_glossary(terms: Vec<GlossaryTerm>) -> CheckContext {
-        CheckContext {
-            config: GoodwriteConfig::default(),
-            glossary: Some(GlossaryData::new(terms)),
             glossary_data: None,
             file_has_mode_annotations: true,
         }
@@ -554,26 +532,27 @@ mod tests {
 
     #[test]
     fn approved_word_with_mismatched_pos_requires_rewrite() {
-        let ctx = context_with_glossary(vec![GlossaryTerm {
-            canonical: "system".to_string(),
-            synonyms: Vec::new(),
-            pos: Some("verb".to_string()),
-            category: Some("technical-verb".to_string()),
-        }]);
+        let ctx = context();
         let engine = ComplianceEngine::new(&ctx);
-        let sent = sentence(&["shall", "system"]);
+        let sent = sentence(&["shall", "damage"]);
         let decisions = engine.analyze_sentence(&sent, WritingMode::Procedural);
         let system = decisions
             .iter()
-            .find(|decision| decision.normalized == "system")
+            .find(|decision| decision.normalized == "damage")
             .expect("decision exists");
 
-        assert!(matches!(system.state, ComplianceState::NeedsRewrite));
+        assert!(
+            matches!(system.state, ComplianceState::NeedsRewrite),
+            "Expected NeedsRewrite, got {:?}",
+            system.state
+        );
         assert!(
             system
                 .actions
                 .iter()
-                .any(|action| matches!(action, ComplianceAction::ClarifyPartOfSpeech))
+                .any(|action| matches!(action, ComplianceAction::ClarifyPartOfSpeech)),
+            "actions: {:?}",
+            system.actions
         );
         assert!(
             system
@@ -615,7 +594,7 @@ mod tests {
     fn unresolved_pos_for_approved_word_is_ambiguous() {
         let ctx = context();
         let engine = ComplianceEngine::new(&ctx);
-        let sent = sentence(&["shall", "control"]);
+        let sent = sentence(&["control"]);
         let decisions = engine.analyze_sentence(&sent, WritingMode::Descriptive);
         let control = decisions
             .iter()

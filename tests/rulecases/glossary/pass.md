@@ -1,1 +1,1 @@
-The actuator starts the system.
+The actuator starts the gizmo.

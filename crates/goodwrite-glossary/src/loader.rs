@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use goodwrite_core::{
     GlossaryAlternative, GlossaryApprovedEntry, GlossaryData, GlossaryFileData,
-    GlossaryNotApprovedEntry, GlossaryTerm,
+    GlossaryNotApprovedEntry,
 };
 use serde::Deserialize;
 use thiserror::Error;
@@ -15,8 +15,6 @@ struct GlossaryFile {
     approved: Vec<RawApprovedEntry>,
     #[serde(default, rename = "not_approved")]
     not_approved: Vec<RawNotApprovedEntry>,
-    #[serde(default)]
-    terms: Vec<RawTerm>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -56,15 +54,6 @@ enum RawAlternative {
         pos: Option<String>,
         context: Option<String>,
     },
-}
-
-#[derive(Debug, Deserialize)]
-struct RawTerm {
-    canonical: String,
-    #[serde(default)]
-    synonyms: Vec<String>,
-    pos: Option<String>,
-    category: Option<String>,
 }
 
 pub fn load_glossary_file(path: &Path) -> Result<GlossaryFileData, GlossaryError> {
@@ -114,29 +103,17 @@ pub fn load_glossary_file(path: &Path) -> Result<GlossaryFileData, GlossaryError
         })
         .collect::<Vec<_>>();
 
-    let terms = parsed
-        .terms
-        .into_iter()
-        .map(|term| GlossaryTerm {
-            canonical: term.canonical,
-            synonyms: term.synonyms,
-            pos: term.pos,
-            category: term.category,
-        })
-        .collect::<Vec<_>>();
-
     validate_glossary_entries(&approved, &not_approved)?;
 
     Ok(GlossaryFileData {
         approved,
         not_approved,
-        terms,
     })
 }
 
 pub fn load_glossary(path: &Path) -> Result<GlossaryData, GlossaryError> {
     let parsed = load_glossary_file(path)?;
-    Ok(GlossaryData::new(parsed.terms))
+    Ok(GlossaryData::new(parsed.approved, parsed.not_approved))
 }
 
 fn validate_glossary_entries(

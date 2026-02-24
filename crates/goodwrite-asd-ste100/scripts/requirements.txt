@@ -1,0 +1,7 @@
+# The `pdftotext` pip package relies on the poppler C++ library headers.
+# You MUST install poppler on your system before installing these requirements.
+#
+# macOS: `brew install poppler`
+# Ubuntu/Debian: `sudo apt-get install build-essential libpoppler-cpp-dev pkg-config python3-dev`
+
+pdftotext==3.0.0

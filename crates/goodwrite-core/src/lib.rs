@@ -18,7 +18,7 @@ pub use config::{
 };
 pub use context::{
     CheckContext, GlossaryAlternative, GlossaryApprovedEntry, GlossaryData, GlossaryFileData,
-    GlossaryNotApprovedEntry, GlossaryTerm,
+    GlossaryNotApprovedEntry,
 };
 pub use diagnostic::{Diagnostic, Severity, SourceRange};
 pub use rule::{Rule, RuleInput, RuleSet};
