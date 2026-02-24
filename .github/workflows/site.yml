@@ -15,8 +15,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install html5validator
-        run: pip install html5validator
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
 
       - name: Validate site
         run: ./scripts/ci/run.sh site --channel stable
