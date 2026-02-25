@@ -176,6 +176,50 @@ alternatives = [{ word = "actuator" }]
 }
 
 #[test]
+fn glossary_phrase_synonym_suppresses_overlapping_asd_token_noise() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100", "glossary"]
+
+[glossary]
+path = "glossary.toml"
+"#,
+    );
+    let _glossary = workspace.write(
+        "glossary.toml",
+        r#"[[approved]]
+word = "FluxDrive"
+pos = "noun"
+
+[[not_approved]]
+word = "flux drive"
+pos = "noun"
+alternatives = [{ word = "FluxDrive" }]
+"#,
+    );
+    let input = workspace.write(
+        "doc.md",
+        "<!-- goodwrite:mode:descriptive -->\nThe flux drive starts.\n",
+    );
+
+    let output = run_goodwrite(
+        &["--config", as_utf8(&config), "check", as_utf8(&input)],
+        workspace.root(),
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+    assert!(stderr.contains("glossary/synonym-enforce"), "{stderr}");
+    assert!(!stderr.contains("asd-ste100/unapproved-word"), "{stderr}");
+    assert!(
+        !stderr.contains("asd-ste100/non-approved-as-technical-noun"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn glossary_undefined_term_rule_flags_unknown_acronym() {
     let workspace = TempWorkspace::new();
     let config = workspace.write(

@@ -134,7 +134,9 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
             Event::HardBreak => {
                 append_text(&mut buffer, &mut buffer_start, &mut buffer_end, ". ", range);
             }
-            Event::End(TagEnd::Paragraph | TagEnd::Item | TagEnd::BlockQuote) => {
+            Event::End(
+                TagEnd::Paragraph | TagEnd::Item | TagEnd::BlockQuote | TagEnd::TableCell,
+            ) => {
                 flush_span(
                     &mut spans,
                     &mut buffer,
@@ -269,6 +271,28 @@ fn apply_markdown_annotation(
 mod tests {
     use super::*;
 
+    fn find_span_with_text<'a>(extracted: &'a ExtractResult, needle: &str) -> &'a ProseSpan {
+        extracted
+            .spans
+            .iter()
+            .find(|span| span.text.contains(needle))
+            .expect("expected span containing target text")
+    }
+
+    fn assert_alignment(source: &str, span: &ProseSpan, needle: &str) {
+        let local = span
+            .text
+            .find(needle)
+            .expect("expected needle in extracted span text");
+        let absolute = span.range.start + local;
+        assert_eq!(&source[absolute..absolute + needle.len()], needle);
+    }
+
+    fn assert_semicolon_and_close_alignment(source: &str, span: &ProseSpan) {
+        assert_alignment(source, span, ";");
+        assert_alignment(source, span, "close");
+    }
+
     #[test]
     fn attaches_unsafe_annotation_from_html_comments_to_next_span() {
         let source = "<!-- goodwrite:mode:descriptive -->\n<!-- goodwrite:unsafe(asd-ste100/unapproved-word): required wording from certification source -->\nUtilize this mode.\n";
@@ -303,5 +327,38 @@ mod tests {
             &source[review_absolute..review_absolute + "review".len()],
             "review"
         );
+    }
+
+    #[test]
+    fn indented_ordered_list_offsets_match_original_source() {
+        let source = "<!-- goodwrite:mode:procedural -->\n  1. Open the service panel; close the service panel.\n";
+        let extracted = extract_markdown(source).expect("markdown extraction should succeed");
+        let span = find_span_with_text(
+            &extracted,
+            "Open the service panel; close the service panel.",
+        );
+        assert_semicolon_and_close_alignment(source, span);
+    }
+
+    #[test]
+    fn indented_unordered_list_offsets_match_original_source() {
+        let source = "<!-- goodwrite:mode:procedural -->\n  - Open the service panel; close the service panel.\n";
+        let extracted = extract_markdown(source).expect("markdown extraction should succeed");
+        let span = find_span_with_text(
+            &extracted,
+            "Open the service panel; close the service panel.",
+        );
+        assert_semicolon_and_close_alignment(source, span);
+    }
+
+    #[test]
+    fn markdown_table_cell_offsets_match_original_source() {
+        let source = "<!-- goodwrite:mode:procedural -->\n| Step | Action |\n| --- | --- |\n| 1 | Open the service panel; close the service panel. |\n";
+        let extracted = extract_markdown(source).expect("markdown extraction should succeed");
+        let span = find_span_with_text(
+            &extracted,
+            "Open the service panel; close the service panel.",
+        );
+        assert_semicolon_and_close_alignment(source, span);
     }
 }

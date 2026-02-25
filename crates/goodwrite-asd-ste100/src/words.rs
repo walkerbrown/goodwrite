@@ -51,6 +51,9 @@ impl Rule for UnapprovedWordRule {
                 if !dictionary.known_non_approved(&decision.normalized) {
                     continue;
                 }
+                if covered_by_actionable_glossary_synonym(input, ctx, decision.token.range) {
+                    continue;
+                }
 
                 let Some(alternatives) = dictionary.alternatives_for_word(&decision.normalized)
                 else {
@@ -460,6 +463,9 @@ impl Rule for NonApprovedTechnicalNounRule {
             .filter_map(|token| {
                 let lower = token.text.to_ascii_lowercase();
                 if !dictionary.known_non_approved(&lower) {
+                    return None;
+                }
+                if covered_by_actionable_glossary_synonym(input, ctx, token.range) {
                     return None;
                 }
 
@@ -1021,6 +1027,50 @@ fn absolute_range(
         input.span.range.start + local_start,
         input.span.range.start + local_end,
     )
+}
+
+// Phrase-level glossary synonym matches are higher-confidence rewrites than
+// token-level ASD replacements. When a token is inside an actionable glossary
+// synonym span (for example, `flux drive` -> `FluxDrive`), suppress overlapping
+// token diagnostics to avoid contradictory guidance.
+fn covered_by_actionable_glossary_synonym(
+    input: &RuleInput,
+    ctx: &CheckContext,
+    token_range: goodwrite_core::SourceRange,
+) -> bool {
+    let Some(glossary) = ctx.glossary.as_ref() else {
+        return false;
+    };
+
+    if token_range.start < input.span.range.start || token_range.end > input.span.range.end {
+        return false;
+    }
+
+    let local_start = token_range.start - input.span.range.start;
+    let local_end = token_range.end - input.span.range.start;
+    let lower = input.span.text.to_ascii_lowercase();
+
+    for entry in glossary.not_approved() {
+        // Mirror glossary/synonym-enforce behavior: only suppress when a
+        // canonical replacement exists and is therefore actionable.
+        let canonical = entry
+            .alternatives
+            .first()
+            .map(|alt| alt.word.trim())
+            .unwrap_or_default();
+        if canonical.is_empty() {
+            continue;
+        }
+
+        let synonym_lower = entry.word.to_ascii_lowercase();
+        for (start, end) in find_token_boundary_matches(&lower, &synonym_lower) {
+            if local_start >= start && local_end <= end {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 fn find_token_boundary_matches(haystack: &str, needle: &str) -> Vec<(usize, usize)> {
