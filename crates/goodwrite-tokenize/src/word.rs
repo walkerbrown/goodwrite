@@ -5,7 +5,7 @@ use goodwrite_core::{SourceRange, Token};
 /// Tokenize words with source offsets.
 pub fn tokenize_words(text: &str, absolute_start: usize) -> Vec<Token> {
     static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-        Regex::new(r#"\([^)]*\)|"[^"]+"|[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*"#)
+        Regex::new(r#"\([^)]*\)|"[^"]+"|[A-Za-z0-9]+(?:[-'’][A-Za-z0-9]+)*"#)
             .expect("valid token regex")
     });
 
@@ -20,7 +20,7 @@ pub fn tokenize_words(text: &str, absolute_start: usize) -> Vec<Token> {
 /// ASD-STE100 counting rules 8.4-8.7 (best-effort implementation).
 pub fn asd_ste100_word_count(sentence: &str) -> usize {
     static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-        Regex::new(r#"\([^)]*\)|"[^"]+"|[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*"#)
+        Regex::new(r#"\([^)]*\)|"[^"]+"|[A-Za-z0-9]+(?:[-'’][A-Za-z0-9]+)*"#)
             .expect("valid count regex")
     });
 
@@ -114,5 +114,11 @@ mod tests {
     fn proper_noun_sequence_counts_as_one() {
         let count = asd_ste100_word_count("Send report to Federal Aviation Administration office.");
         assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn apostrophe_contraction_counts_as_one() {
+        let count = asd_ste100_word_count("The operator can't review the trace.");
+        assert_eq!(count, 6);
     }
 }

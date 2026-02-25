@@ -110,6 +110,35 @@ enable = ["asd-ste100"]
 }
 
 #[test]
+fn cant_review_is_not_misclassified_as_noun_phrase() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100"]
+"#,
+    );
+    let input = workspace.write(
+        "doc.md",
+        "<!-- goodwrite:mode:descriptive -->\nThe operator can't review the startup trace.\n",
+    );
+
+    let output = run_goodwrite(
+        &["--config", as_utf8(&config), "check", as_utf8(&input)],
+        workspace.root(),
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("asd-ste100/contractions"), "{stderr}");
+    assert!(stderr.contains("asd-ste100/unapproved-word"), "{stderr}");
+    assert!(
+        !stderr.contains("asd-ste100/articles-before-nouns"),
+        "{stderr}"
+    );
+}
+
+#[test]
 fn config_override_can_disable_rule() {
     let workspace = TempWorkspace::new();
     let config = workspace.write(

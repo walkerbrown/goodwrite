@@ -138,7 +138,7 @@ pub fn analyze_tokens<L: PosLexiconProvider + ?Sized>(
 
     for token in tokens {
         let mut trace = vec![AnalysisTraceStep::EnterState(state)];
-        let lower = token.text.to_ascii_lowercase();
+        let lower = normalize_apostrophes(&token.text.to_ascii_lowercase());
 
         let generated = generate_candidates(&lower, ctx.lexicon);
         trace.push(AnalysisTraceStep::GeneratedCandidates {
@@ -224,7 +224,10 @@ fn morphology_candidates(lower: &str) -> Vec<PosCandidate> {
         });
     }
 
-    if matches!(lower, "shall" | "must" | "can" | "may" | "will") {
+    if matches!(
+        lower,
+        "shall" | "must" | "can" | "cannot" | "can't" | "may" | "will"
+    ) {
         out.push(PosCandidate {
             lemma: lower.to_string(),
             pos: PosClass::Modal,
@@ -430,7 +433,16 @@ fn next_state(analysis: &TokenAnalysis, lower: &str) -> DeterministicPosState {
 
     if matches!(
         lower,
-        "shall" | "must" | "can" | "may" | "will" | "should" | "could" | "would"
+        "shall"
+            | "must"
+            | "can"
+            | "cannot"
+            | "can't"
+            | "may"
+            | "will"
+            | "should"
+            | "could"
+            | "would"
     ) {
         return DeterministicPosState::AfterModal;
     }
@@ -448,6 +460,10 @@ fn next_state(analysis: &TokenAnalysis, lower: &str) -> DeterministicPosState {
         },
         _ => DeterministicPosState::Neutral,
     }
+}
+
+fn normalize_apostrophes(value: &str) -> String {
+    value.replace('’', "'")
 }
 
 fn dedupe_candidates(candidates: Vec<PosCandidate>) -> Vec<PosCandidate> {
@@ -543,6 +559,76 @@ mod tests {
         let second = &analyses[1];
         assert!(matches!(
             second.resolution,
+            PosResolution::Resolved(PosCandidate {
+                pos: PosClass::Verb,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn cannot_requires_following_verb() {
+        let mut entries = HashMap::new();
+        entries.insert(
+            "review".to_string(),
+            vec![
+                PosCandidate {
+                    lemma: "review".to_string(),
+                    pos: PosClass::Noun,
+                    source: CandidateSource::Lexicon,
+                },
+                PosCandidate {
+                    lemma: "review".to_string(),
+                    pos: PosClass::Verb,
+                    source: CandidateSource::Lexicon,
+                },
+            ],
+        );
+
+        let lexicon = TestLexicon { entries };
+        let ctx = DeterministicPosContext {
+            lexicon: &lexicon,
+            mode: Some(WritingMode::Descriptive),
+        };
+
+        let analyses = analyze_tokens(&[token("cannot", 0), token("review", 7)], &ctx);
+        assert!(matches!(
+            analyses[1].resolution,
+            PosResolution::Resolved(PosCandidate {
+                pos: PosClass::Verb,
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn cant_requires_following_verb() {
+        let mut entries = HashMap::new();
+        entries.insert(
+            "review".to_string(),
+            vec![
+                PosCandidate {
+                    lemma: "review".to_string(),
+                    pos: PosClass::Noun,
+                    source: CandidateSource::Lexicon,
+                },
+                PosCandidate {
+                    lemma: "review".to_string(),
+                    pos: PosClass::Verb,
+                    source: CandidateSource::Lexicon,
+                },
+            ],
+        );
+
+        let lexicon = TestLexicon { entries };
+        let ctx = DeterministicPosContext {
+            lexicon: &lexicon,
+            mode: Some(WritingMode::Descriptive),
+        };
+
+        let analyses = analyze_tokens(&[token("can't", 0), token("review", 6)], &ctx);
+        assert!(matches!(
+            analyses[1].resolution,
             PosResolution::Resolved(PosCandidate {
                 pos: PosClass::Verb,
                 ..

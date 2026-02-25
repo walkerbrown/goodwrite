@@ -415,7 +415,7 @@ fn meaning_confirmation_required(word: &str) -> bool {
 fn is_word_token(token: &str) -> bool {
     token
         .chars()
-        .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '\'')
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '\'' || ch == '’')
 }
 
 struct ComplianceLexicon<'a> {

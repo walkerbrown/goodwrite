@@ -984,7 +984,7 @@ impl Rule for AmericanSpellingRule {
 fn is_word_token(token: &str) -> bool {
     token
         .chars()
-        .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '\'')
+        .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '\'' || ch == '’')
 }
 
 fn looks_technical_noun_candidate(token: &str) -> bool {
