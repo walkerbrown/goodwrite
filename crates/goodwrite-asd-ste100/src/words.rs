@@ -82,7 +82,7 @@ impl Rule for UnapprovedWordRule {
                     diagnostic = diagnostic.with_suggestion(Suggestion {
                         span: decision.token.range,
                         replacement: replacement.clone(),
-                        applicability: Applicability::MachineApplicable,
+                        applicability: Applicability::MaybeIncorrect,
                         message: "replace with approved alternative".to_string(),
                     });
                 }

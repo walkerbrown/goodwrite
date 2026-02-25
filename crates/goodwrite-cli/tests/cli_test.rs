@@ -63,7 +63,7 @@ enable = ["asd-ste100"]
         "{stdout}"
     );
     assert!(
-        stdout.contains("+Do not open valve. close valve."),
+        stdout.contains("+Do not open valve. Close valve."),
         "{stdout}"
     );
 
@@ -101,7 +101,7 @@ enable = ["asd-ste100"]
     assert!(output.status.success(), "{stderr}");
     assert!(
         stdout.contains(
-            "+The operator cannot inspection the startup trace, for example during bench validation."
+            "+The operator cannot review the startup trace, for example during bench validation."
         ),
         "{stdout}"
     );

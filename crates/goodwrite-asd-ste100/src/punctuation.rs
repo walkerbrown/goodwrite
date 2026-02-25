@@ -34,8 +34,8 @@ impl Rule for SemicolonRule {
 
             let absolute = absolute_range(input, idx, idx + ch.len_utf8());
 
-            diagnostics.push(
-                Diagnostic::new(
+            diagnostics.push({
+                let mut diagnostic = Diagnostic::new(
                     self.id(),
                     self.default_severity(),
                     "semicolon is not allowed in ASD-STE100",
@@ -48,8 +48,22 @@ impl Rule for SemicolonRule {
                     replacement: ".".to_string(),
                     applicability: Applicability::MachineApplicable,
                     message: "replace semicolon with period".to_string(),
-                }),
-            );
+                });
+
+                if let Some((local_start, lower)) =
+                    next_sentence_lowercase_start(&input.span.text, idx + ch.len_utf8())
+                {
+                    let local_end = local_start + lower.len_utf8();
+                    diagnostic = diagnostic.with_suggestion(Suggestion {
+                        span: absolute_range(input, local_start, local_end),
+                        replacement: lower.to_uppercase().to_string(),
+                        applicability: Applicability::MachineApplicable,
+                        message: "capitalize sentence start after semicolon split".to_string(),
+                    });
+                }
+
+                diagnostic
+            });
         }
 
         diagnostics
@@ -171,6 +185,24 @@ impl Rule for ParenthesesUsageRule {
 
         diagnostics
     }
+}
+
+fn next_sentence_lowercase_start(text: &str, from: usize) -> Option<(usize, char)> {
+    if from >= text.len() {
+        return None;
+    }
+
+    for (offset, ch) in text[from..].char_indices() {
+        if ch.is_whitespace() || matches!(ch, '"' | '\'' | '“' | '‘' | '(' | '[' | '{') {
+            continue;
+        }
+        if ch.is_lowercase() {
+            return Some((from + offset, ch));
+        }
+        return None;
+    }
+
+    None
 }
 
 fn absolute_range(
