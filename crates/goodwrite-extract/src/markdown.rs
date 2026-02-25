@@ -12,7 +12,14 @@ use crate::{
 pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractError> {
     // The markdown extractor is intentionally event-driven so we can keep
     // source offsets from pulldown-cmark and avoid a second pass over the file.
-    let parser = Parser::new_ext(source, Options::all()).into_offset_iter();
+    //
+    // Smart punctuation must stay disabled: enabling it rewrites bytes in
+    // `Event::Text` (for example, `'` -> `’`) while ranges still refer to the
+    // original source bytes. That mismatch shifts downstream token/suggestion
+    // offsets and corrupts `goodwrite fix` replacements.
+    let mut options = Options::all();
+    options.remove(Options::ENABLE_SMART_PUNCTUATION);
+    let parser = Parser::new_ext(source, options).into_offset_iter();
 
     let mut spans = Vec::new();
     let mut has_mode_annotations = false;
@@ -276,6 +283,25 @@ mod tests {
         assert_eq!(
             span.unsafe_annotations[0].reason,
             "required wording from certification source"
+        );
+    }
+
+    #[test]
+    fn keeps_post_apostrophe_offsets_aligned_with_source() {
+        let source = "<!-- goodwrite:mode:descriptive -->\nThe operator can't review the startup trace, e.g. during bench validation.\n";
+        let extracted = extract_markdown(source).expect("markdown extraction should succeed");
+        assert_eq!(extracted.spans.len(), 1);
+
+        let span = &extracted.spans[0];
+        let review_local = span
+            .text
+            .find("review")
+            .expect("extracted span should contain review");
+        let review_absolute = span.range.start + review_local;
+
+        assert_eq!(
+            &source[review_absolute..review_absolute + "review".len()],
+            "review"
         );
     }
 }

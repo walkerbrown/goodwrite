@@ -72,6 +72,44 @@ enable = ["asd-ste100"]
 }
 
 #[test]
+fn fix_dry_run_keeps_replacements_aligned_after_apostrophes() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100"]
+"#,
+    );
+    let input = workspace.write(
+        "doc.md",
+        "<!-- goodwrite:mode:descriptive -->\nThe operator can't review the startup trace, e.g. during bench validation.\n",
+    );
+
+    let output = run_goodwrite(
+        &[
+            "--config",
+            as_utf8(&config),
+            "fix",
+            "--dry-run",
+            as_utf8(&input),
+        ],
+        workspace.root(),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+    assert!(
+        stdout.contains(
+            "+The operator cannot inspection the startup trace, for example during bench validation."
+        ),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("reinspectionhe"), "{stdout}");
+    assert!(!stdout.contains("e.for exampleuring"), "{stdout}");
+}
+
+#[test]
 fn config_override_can_disable_rule() {
     let workspace = TempWorkspace::new();
     let config = workspace.write(
