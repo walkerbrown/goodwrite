@@ -93,15 +93,10 @@ pub struct CheckSection {
     pub exclude: Vec<String>,
 }
 
-/// Controls behavior when goodwrite must infer metadata from heuristics.
-#[derive(Debug, Clone, Default, Deserialize)]
-pub struct HeuristicsSection {
-    /// Escalate heuristic fallback diagnostics from warning to error.
-    ///
-    /// This applies when goodwrite must infer profile metadata (for example,
-    /// writing mode) because explicit source annotations are missing.
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct UnsafeSection {
     #[serde(default)]
-    pub strict: bool,
+    pub ignore: Vec<String>,
 }
 
 /// Parsed `goodwrite.toml`.
@@ -119,8 +114,8 @@ pub struct GoodwriteConfig {
     pub rules: BTreeMap<String, RuleOverride>,
     #[serde(default)]
     pub format: FormatSection,
-    #[serde(default)]
-    pub heuristics: HeuristicsSection,
+    #[serde(default, rename = "unsafe")]
+    pub unsafe_: UnsafeSection,
 }
 
 impl Default for GoodwriteConfig {
@@ -134,7 +129,7 @@ impl Default for GoodwriteConfig {
             check: CheckSection::default(),
             rules: BTreeMap::new(),
             format: FormatSection::default(),
-            heuristics: HeuristicsSection::default(),
+            unsafe_: UnsafeSection::default(),
         };
         config.normalize_requirement_rulesets();
         config
@@ -286,5 +281,17 @@ default_ruleset = "custom"
             vec!["internal-disabled", "ears"]
         );
         assert_eq!(config.requirements.default_ruleset, "internal-disabled");
+    }
+
+    #[test]
+    fn unsafe_ignore_patterns_are_loaded() {
+        let config = GoodwriteConfig::from_toml(
+            r#"[unsafe]
+ignore = ["docs/**/*.md", "legacy/*.typ"]
+"#,
+        )
+        .expect("parse config");
+
+        assert_eq!(config.unsafe_.ignore, vec!["docs/**/*.md", "legacy/*.typ"]);
     }
 }

@@ -448,6 +448,7 @@ dependencies = [
 name = "goodwrite-lsp"
 version = "0.1.0"
 dependencies = [
+ "glob",
  "goodwrite-asd-ste100",
  "goodwrite-core",
  "goodwrite-ears",

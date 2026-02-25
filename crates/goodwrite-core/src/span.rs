@@ -74,5 +74,5 @@ pub struct ExtractResult {
     pub source: String,
     pub spans: Vec<ProseSpan>,
     pub has_mode_annotations: bool,
-    pub used_mode_heuristic: bool,
+    pub used_mode_inference: bool,
 }

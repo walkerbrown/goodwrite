@@ -10,7 +10,7 @@ use std::{fs, path::Path};
 use goodwrite_core::ExtractResult;
 use thiserror::Error;
 
-pub use spans::mode_from_heuristic;
+pub use spans::mode_from_inference;
 
 /// Extract prose spans from a source file.
 pub fn extract_path(path: &Path) -> Result<ExtractResult, ExtractError> {

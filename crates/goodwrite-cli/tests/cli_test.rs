@@ -62,6 +62,11 @@ fn init_config_writes_commented_default_profiles_template() {
         config.contains("# enable = [\"asd-ste100\", \"ears\", \"glossary\"]"),
         "{config}"
     );
+    assert!(config.contains("# [unsafe]"), "{config}");
+    assert!(
+        config.contains("# ignore = [\"docs/legacy/**/*.md\"]"),
+        "{config}"
+    );
 }
 
 #[test]
@@ -717,58 +722,51 @@ fn requirement_ruleset_cli_flag_is_rejected() {
 }
 
 #[test]
-fn heuristic_fallback_emits_warning_and_can_be_strict() {
+fn missing_mode_annotation_emits_info_diagnostic() {
     let workspace = TempWorkspace::new();
-    let warning_config = workspace.write(
-        "warning.toml",
+    let config = workspace.write(
+        "goodwrite.toml",
         r#"[profiles]
 enable = ["asd-ste100"]
-
-[heuristics]
-strict = false
-"#,
-    );
-    let strict_config = workspace.write(
-        "strict.toml",
-        r#"[profiles]
-enable = ["asd-ste100"]
-
-[heuristics]
-strict = true
 "#,
     );
     let input = workspace.write("fallback.md", "Open the valve.\n");
 
-    let warning_output = run_goodwrite(
-        &[
-            "--config",
-            as_utf8(&warning_config),
-            "check",
-            as_utf8(&input),
-        ],
+    let output = run_goodwrite(
+        &["--config", as_utf8(&config), "check", as_utf8(&input)],
         workspace.root(),
     );
-    let warning_stderr = String::from_utf8_lossy(&warning_output.stderr);
-    assert!(warning_output.status.success(), "{warning_stderr}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
     assert!(
-        warning_stderr.contains("goodwrite/heuristic-fallback"),
-        "{warning_stderr}"
+        stderr.contains("goodwrite/missing-mode-annotation"),
+        "{stderr}"
     );
+}
 
-    let strict_output = run_goodwrite(
-        &[
-            "--config",
-            as_utf8(&strict_config),
-            "check",
-            as_utf8(&input),
-        ],
+#[test]
+fn unsafe_ignore_suppresses_mode_annotation_info_relative_to_config() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "config/goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100"]
+
+[unsafe]
+ignore = ["docs/*.md"]
+"#,
+    );
+    let input = workspace.write("config/docs/fallback.md", "Open the valve.\n");
+
+    let output = run_goodwrite(
+        &["--config", as_utf8(&config), "check", as_utf8(&input)],
         workspace.root(),
     );
-    let strict_stderr = String::from_utf8_lossy(&strict_output.stderr);
-    assert!(!strict_output.status.success(), "{strict_stderr}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
     assert!(
-        strict_stderr.contains("goodwrite/heuristic-fallback"),
-        "{strict_stderr}"
+        !stderr.contains("goodwrite/missing-mode-annotation"),
+        "{stderr}"
     );
 }
 

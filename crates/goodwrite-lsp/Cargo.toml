@@ -17,3 +17,4 @@ goodwrite-glossary.workspace = true
 tokio.workspace = true
 tower-lsp-server = "0.23"
 serde_json.workspace = true
+glob.workspace = true

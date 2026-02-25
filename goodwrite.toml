@@ -5,9 +5,6 @@ enable = ["asd-ste100", "ears", "glossary"]
 active_rulesets = ["ears"]
 default_ruleset = "ears"
 
-[heuristics]
-strict = false
-
 [glossary]
 path = "glossary.toml"
 

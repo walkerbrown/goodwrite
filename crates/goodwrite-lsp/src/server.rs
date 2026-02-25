@@ -91,6 +91,8 @@ impl GoodwriteServer {
 
         let config = self.config.read().await.clone();
         let root = self.workspace_root.read().await.clone();
+        let config_dir = resolve_config_dir(root.as_deref());
+        let mode_notice_ignored = is_mode_notice_ignored(path.as_ref(), &config_dir, &config);
         let glossary_data = match load_glossary(&config, root.as_deref()) {
             Ok(value) => value,
             Err(message) => {
@@ -126,7 +128,7 @@ impl GoodwriteServer {
         };
 
         let mut diagnostics = Vec::new();
-        let used_mode_heuristic = extract.used_mode_heuristic;
+        let used_mode_inference = extract.used_mode_inference;
         for span in extract.spans {
             let mut input = RuleInput {
                 file_path: path.display().to_string(),
@@ -136,20 +138,16 @@ impl GoodwriteServer {
             diagnostics.extend(ruleset.run(&mut input, &context));
         }
 
-        if used_mode_heuristic && context.profile_enabled("asd-ste100") {
+        if used_mode_inference && context.profile_enabled("asd-ste100") && !mode_notice_ignored {
             diagnostics.push(
                 CoreDiagnostic::new(
-                    "goodwrite/heuristic-fallback",
-                    if context.config.heuristics.strict {
-                        goodwrite_core::Severity::Error
-                    } else {
-                        goodwrite_core::Severity::Warning
-                    },
-                    "writing mode fallback inference was used",
+                    "goodwrite/missing-mode-annotation",
+                    goodwrite_core::Severity::Info,
+                    "no file-level writing mode annotation was found",
                     goodwrite_core::SourceRange::new(0, 1.min(text.len())),
                 )
                 .with_help(
-                    "add explicit mode annotations (for example: <!-- goodwrite:mode:descriptive -->)",
+                    "add explicit mode annotations (for example: <!-- goodwrite:mode:descriptive -->) or add a path glob to [unsafe].ignore in goodwrite.toml",
                 ),
             );
         }
@@ -389,4 +387,40 @@ fn build_ruleset(config: &GoodwriteConfig) -> RuleSet {
     }
 
     set
+}
+
+fn resolve_config_dir(workspace_root: Option<&Path>) -> PathBuf {
+    workspace_root
+        .map(|path| path.to_path_buf())
+        .or_else(|| std::env::current_dir().ok())
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn is_mode_notice_ignored(path: &Path, config_dir: &Path, config: &GoodwriteConfig) -> bool {
+    let patterns = config
+        .unsafe_
+        .ignore
+        .iter()
+        .filter_map(|value| glob::Pattern::new(value).ok())
+        .collect::<Vec<_>>();
+    if patterns.is_empty() {
+        return false;
+    }
+
+    let file_abs_candidate = normalize_glob_candidate(path);
+    let file_rel_candidate = path
+        .strip_prefix(config_dir)
+        .ok()
+        .map(normalize_glob_candidate);
+
+    patterns.iter().any(|pattern| {
+        pattern.matches(&file_abs_candidate)
+            || file_rel_candidate
+                .as_ref()
+                .is_some_and(|candidate| pattern.matches(candidate))
+    })
+}
+
+fn normalize_glob_candidate(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }

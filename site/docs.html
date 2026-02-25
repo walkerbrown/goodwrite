@@ -83,8 +83,18 @@ goodwrite init glossary</pre
                             only the listed profiles are enabled.
                         </li>
                         <li>
-                            Set <span class="inline-code">heuristics.strict = true</span>
-                            to make fallback inference diagnostics fail checks.
+                            When file-level mode annotations are missing,
+                            goodwrite emits
+                            <span class="inline-code"
+                                >goodwrite/missing-mode-annotation</span
+                            >
+                            as an info diagnostic.
+                        </li>
+                        <li>
+                            Use <span class="inline-code">[unsafe].ignore</span>
+                            globs to suppress that info diagnostic for selected
+                            files. These globs resolve relative to
+                            <span class="inline-code">goodwrite.toml</span>.
                         </li>
                         <li>
                             Configure requirement rulesets in

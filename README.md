@@ -54,6 +54,14 @@ goodwrite init glossary  # glossary.toml
 The default profiles applied, without `goodwrite.toml`, are:
 `["asd-ste100", "ears", "glossary"]`.
 
+`goodwrite init config` and `goodwrite init glossary` refuse to overwrite
+existing files.
+
+When a file has no explicit writing mode annotations, goodwrite reports
+`goodwrite/missing-mode-annotation` as an info diagnostic. To suppress that for
+known paths, use `[unsafe].ignore` globs in `goodwrite.toml`. These globs are
+resolved relative to the directory containing `goodwrite.toml`.
+
 ## Requirement Syntax
 
 User-authored source stays ruleset-agnostic.

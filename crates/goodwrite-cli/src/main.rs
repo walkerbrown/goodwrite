@@ -29,10 +29,6 @@ struct Cli {
     #[arg(short, long, default_value = "goodwrite.toml")]
     config: PathBuf,
 
-    /// Escalate heuristic fallback diagnostics from warning to error.
-    #[arg(long)]
-    strict: bool,
-
     /// Control color output (auto, always, never).
     #[arg(long, value_enum, default_value = "auto")]
     color: ColorChoice,
@@ -110,7 +106,6 @@ fn run(cli: Cli) -> i32 {
 fn execute(cli: Cli) -> Result<i32, CliError> {
     let Cli {
         config: config_path,
-        strict,
         color: color_choice,
         command,
     } = cli;
@@ -133,8 +128,7 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
             Ok(0)
         }
         Command::Check { files, format } => {
-            let mut config = load_config(&config_path)?;
-            apply_cli_overrides(&mut config, strict);
+            let loaded = load_config(&config_path)?;
 
             let progress = matches!(format, OutputFormat::Terminal)
                 .then(|| std::io::IsTerminal::is_terminal(&std::io::stderr()))
@@ -149,7 +143,7 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
                     pb
                 });
 
-            let checks = analyze_files(&files, &config, progress.as_ref())?;
+            let checks = analyze_files(&files, &loaded.config, &loaded.dir, progress.as_ref())?;
 
             match format {
                 OutputFormat::Terminal => {
@@ -169,9 +163,8 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
             Ok(if has_error { 1 } else { 0 })
         }
         Command::Fix { files, dry_run } => {
-            let mut config = load_config(&config_path)?;
-            apply_cli_overrides(&mut config, strict);
-            let checks = analyze_files(&files, &config, None)?;
+            let loaded = load_config(&config_path)?;
+            let checks = analyze_files(&files, &loaded.config, &loaded.dir, None)?;
             let mut changed_files = 0usize;
 
             for item in checks {
@@ -226,18 +219,14 @@ fn setup_miette(color: bool) {
     .ok();
 }
 
-fn apply_cli_overrides(config: &mut GoodwriteConfig, strict: bool) {
-    if strict {
-        config.heuristics.strict = true;
-    }
-}
-
 fn analyze_files(
     files: &[PathBuf],
     config: &GoodwriteConfig,
+    config_dir: &Path,
     progress: Option<&indicatif::ProgressBar>,
 ) -> Result<Vec<FileDiagnostics>, CliError> {
     let files = expand_input_files(files, &config.check.exclude)?;
+    let unsafe_ignore = compile_unsafe_ignore_patterns(&config.unsafe_.ignore);
 
     if let Some(pb) = progress {
         pb.set_length(files.len() as u64);
@@ -272,9 +261,11 @@ fn analyze_files(
         }
 
         let extract = goodwrite_extract::extract_path(path).map_err(CliError::Extract)?;
+        let mode_notice_ignored = is_mode_notice_ignored(path, config_dir, &unsafe_ignore);
         let file = analyze_extract(
             path,
             extract,
+            mode_notice_ignored,
             config,
             glossary.clone(),
             glossary_data.clone(),
@@ -363,6 +354,47 @@ fn is_excluded(path: &Path, patterns: &[glob::Pattern]) -> bool {
     patterns.iter().any(|pat| pat.matches(&path_str))
 }
 
+fn compile_unsafe_ignore_patterns(patterns: &[String]) -> Vec<glob::Pattern> {
+    patterns
+        .iter()
+        .filter_map(|value| glob::Pattern::new(value).ok())
+        .collect()
+}
+
+fn is_mode_notice_ignored(path: &Path, config_dir: &Path, patterns: &[glob::Pattern]) -> bool {
+    if patterns.is_empty() {
+        return false;
+    }
+
+    let file_abs = absolute_from_cwd(path);
+    let file_abs_candidate = normalize_glob_candidate(&file_abs);
+    let file_rel_candidate = file_abs
+        .strip_prefix(config_dir)
+        .ok()
+        .map(normalize_glob_candidate);
+
+    patterns.iter().any(|pattern| {
+        pattern.matches(&file_abs_candidate)
+            || file_rel_candidate
+                .as_ref()
+                .is_some_and(|relative| pattern.matches(relative))
+    })
+}
+
+fn absolute_from_cwd(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    }
+}
+
+fn normalize_glob_candidate(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
 fn collect_supported_files(path: &Path, out: &mut Vec<PathBuf>) -> Result<(), CliError> {
     if path.is_file() {
         if is_supported_extension(path) {
@@ -413,13 +445,14 @@ fn is_supported_extension(path: &Path) -> bool {
 fn analyze_extract(
     path: &Path,
     extract: ExtractResult,
+    mode_notice_ignored: bool,
     config: &GoodwriteConfig,
     glossary: Option<goodwrite_core::GlossaryData>,
     glossary_data: Option<GlossaryFileData>,
     ruleset: &RuleSet,
 ) -> FileDiagnostics {
     let mut diagnostics = Vec::new();
-    let used_mode_heuristic = extract.used_mode_heuristic;
+    let used_mode_inference = extract.used_mode_inference;
 
     let context = CheckContext {
         config: config.clone(),
@@ -438,22 +471,16 @@ fn analyze_extract(
         diagnostics.extend(ruleset.run(&mut input, &context));
     }
 
-    if used_mode_heuristic && context.profile_enabled("asd-ste100") {
-        // Heuristic fallback warnings are file-level signals: they indicate
-        // metadata quality debt, not a sentence-local grammar violation.
+    if used_mode_inference && context.profile_enabled("asd-ste100") && !mode_notice_ignored {
         diagnostics.push(
             Diagnostic::new(
-                "goodwrite/heuristic-fallback",
-                if context.config.heuristics.strict {
-                    Severity::Error
-                } else {
-                    Severity::Warning
-                },
-                "writing mode fallback inference was used",
+                "goodwrite/missing-mode-annotation",
+                Severity::Info,
+                "no file-level writing mode annotation was found",
                 goodwrite_core::SourceRange::new(0, 1.min(extract.source.len())),
             )
             .with_help(
-                "add explicit mode annotations (for example: <!-- goodwrite:mode:descriptive -->)",
+                "add explicit mode annotations (for example: <!-- goodwrite:mode:descriptive -->) or add a path glob to [unsafe].ignore in goodwrite.toml",
             ),
         );
     }
@@ -527,11 +554,35 @@ fn build_ruleset(config: &GoodwriteConfig) -> RuleSet {
     rules
 }
 
-fn load_config(path: &Path) -> Result<GoodwriteConfig, CliError> {
+struct LoadedConfig {
+    config: GoodwriteConfig,
+    dir: PathBuf,
+}
+
+fn load_config(path: &Path) -> Result<LoadedConfig, CliError> {
+    let dir = resolve_config_dir(path)?;
     if !path.exists() {
-        return Ok(GoodwriteConfig::default());
+        return Ok(LoadedConfig {
+            config: GoodwriteConfig::default(),
+            dir,
+        });
     }
-    GoodwriteConfig::from_path(path).map_err(CliError::Config)
+    let config = GoodwriteConfig::from_path(path).map_err(CliError::Config)?;
+    Ok(LoadedConfig { config, dir })
+}
+
+fn resolve_config_dir(path: &Path) -> Result<PathBuf, CliError> {
+    let cwd = std::env::current_dir().map_err(|source| CliError::CurrentDir { source })?;
+    let absolute_path = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    };
+
+    Ok(absolute_path
+        .parent()
+        .map(|parent| parent.to_path_buf())
+        .unwrap_or(cwd))
 }
 
 fn init_file(target: InitTarget) -> Result<&'static str, CliError> {
@@ -539,9 +590,10 @@ fn init_file(target: InitTarget) -> Result<&'static str, CliError> {
 # [profiles]
 # enable = ["asd-ste100", "ears", "glossary"]
 
-# Optional: treat heuristic fallback diagnostics as errors.
-# [heuristics]
-# strict = true
+# Optional: suppress file-level mode annotation info for matched paths.
+# Paths are evaluated as glob patterns relative to goodwrite.toml.
+# [unsafe]
+# ignore = ["docs/legacy/**/*.md"]
 
 # Optional: customize glossary location if you do not use ./glossary.toml.
 # [glossary]
@@ -592,6 +644,11 @@ fn init_file(target: InitTarget) -> Result<&'static str, CliError> {
 enum CliError {
     #[error("{0}")]
     Usage(String),
+    #[error("failed to resolve current directory")]
+    CurrentDir {
+        #[source]
+        source: std::io::Error,
+    },
     #[error("failed to load config")]
     Config(#[from] goodwrite_core::ConfigError),
     #[error("failed to extract file: {0}")]

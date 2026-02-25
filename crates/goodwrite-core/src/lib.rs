@@ -13,8 +13,8 @@ pub mod text;
 
 pub use annotations::{SpanAnnotations, WritingMode};
 pub use config::{
-    CheckSection, ConfigError, GlossarySection, GoodwriteConfig, HeuristicsSection,
-    RequirementsSection, RuleLevel,
+    CheckSection, ConfigError, GlossarySection, GoodwriteConfig, RequirementsSection, RuleLevel,
+    UnsafeSection,
 };
 pub use context::{
     CheckContext, GlossaryAlternative, GlossaryApprovedEntry, GlossaryData, GlossaryFileData,

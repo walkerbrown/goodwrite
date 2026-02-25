@@ -101,9 +101,6 @@ enable = ["asd-ste100", "glossary"]
 active_rulesets = ["ears"]
 default_ruleset = "ears"
 
-[heuristics]
-strict = false
-
 [glossary]
 path = "glossary.toml"
 "#
@@ -114,16 +111,10 @@ enable = ["ears"]
 [requirements]
 active_rulesets = ["ears"]
 default_ruleset = "ears"
-
-[heuristics]
-strict = false
 "#
         .to_string(),
         "glossary" => r#"[profiles]
 enable = ["glossary"]
-
-[heuristics]
-strict = false
 
 [glossary]
 path = "glossary.toml"

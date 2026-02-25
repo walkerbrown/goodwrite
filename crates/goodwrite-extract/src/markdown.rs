@@ -23,7 +23,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
 
     let mut spans = Vec::new();
     let mut has_mode_annotations = false;
-    let mut used_mode_heuristic = false;
+    let mut used_mode_inference = false;
 
     let mut default_annotations = SpanAnnotations::default();
     let mut current_annotations = SpanAnnotations::default();
@@ -50,7 +50,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
                     &current_annotations,
                     &mut pending_unsafe,
                     current_heading.clone(),
-                    &mut used_mode_heuristic,
+                    &mut used_mode_inference,
                 );
                 in_code_block = true;
             }
@@ -68,7 +68,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
                     &current_annotations,
                     &mut pending_unsafe,
                     current_heading.clone(),
-                    &mut used_mode_heuristic,
+                    &mut used_mode_inference,
                 );
                 in_heading = true;
                 heading_text.clear();
@@ -88,7 +88,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
                     &current_annotations,
                     &mut pending_unsafe,
                     current_heading.clone(),
-                    &mut used_mode_heuristic,
+                    &mut used_mode_inference,
                 );
 
                 let annotations = parse_html_annotations(html.as_ref());
@@ -145,7 +145,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
                     &current_annotations,
                     &mut pending_unsafe,
                     current_heading.clone(),
-                    &mut used_mode_heuristic,
+                    &mut used_mode_inference,
                 );
             }
             _ => {}
@@ -160,12 +160,12 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
         &current_annotations,
         &mut pending_unsafe,
         current_heading,
-        &mut used_mode_heuristic,
+        &mut used_mode_inference,
     );
 
     if !has_mode_annotations {
         for span in &mut spans {
-            used_mode_heuristic |= ensure_mode(&mut span.annotations, &span.text);
+            used_mode_inference |= ensure_mode(&mut span.annotations, &span.text);
         }
     }
 
@@ -173,7 +173,7 @@ pub(crate) fn extract_markdown(source: &str) -> Result<ExtractResult, ExtractErr
         source: String::new(),
         spans,
         has_mode_annotations,
-        used_mode_heuristic,
+        used_mode_inference,
     })
 }
 
@@ -200,7 +200,7 @@ fn flush_span(
     annotations: &SpanAnnotations,
     pending_unsafe: &mut Vec<UnsafeAnnotation>,
     heading: Option<String>,
-    used_mode_heuristic: &mut bool,
+    used_mode_inference: &mut bool,
 ) {
     if buffer.trim().is_empty() {
         buffer.clear();
@@ -217,7 +217,7 @@ fn flush_span(
     let absolute_end = buffer_end.saturating_sub(trailing_trim);
 
     let mut span_annotations = annotations.clone();
-    *used_mode_heuristic |= ensure_mode(&mut span_annotations, trimmed_text);
+    *used_mode_inference |= ensure_mode(&mut span_annotations, trimmed_text);
 
     let mut span = ProseSpan::new(
         trimmed_text.to_string(),

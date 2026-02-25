@@ -17,7 +17,7 @@ pub(crate) fn extract_typst(source: &str) -> Result<ExtractResult, ExtractError>
     // We still parse with typst-syntax above so malformed input is surfaced.
     let mut spans = Vec::new();
     let mut has_mode_annotations = false;
-    let mut used_mode_heuristic = false;
+    let mut used_mode_inference = false;
     let mut current = SpanAnnotations::default();
     let mut pending_unsafe: Vec<UnsafeAnnotation> = Vec::new();
     let mut in_mode_block = false;
@@ -87,7 +87,7 @@ pub(crate) fn extract_typst(source: &str) -> Result<ExtractResult, ExtractError>
         };
 
         let mut annotations = current.clone();
-        used_mode_heuristic |= ensure_mode(&mut annotations, &text);
+        used_mode_inference |= ensure_mode(&mut annotations, &text);
 
         let mut span = ProseSpan::new(
             text,
@@ -104,7 +104,7 @@ pub(crate) fn extract_typst(source: &str) -> Result<ExtractResult, ExtractError>
         source: String::new(),
         spans,
         has_mode_annotations,
-        used_mode_heuristic,
+        used_mode_inference,
     })
 }
 

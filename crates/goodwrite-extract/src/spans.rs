@@ -1,7 +1,7 @@
 use goodwrite_core::{SpanAnnotations, WritingMode};
 
 /// Best-effort writing mode inference when explicit annotations are absent.
-pub fn mode_from_heuristic(text: &str) -> WritingMode {
+pub fn mode_from_inference(text: &str) -> WritingMode {
     let trimmed = text.trim_start();
     let lower = trimmed.to_ascii_lowercase();
 
@@ -22,10 +22,10 @@ pub fn mode_from_heuristic(text: &str) -> WritingMode {
 
 /// Ensure spans always carry a mode.
 ///
-/// Returns `true` when this function had to infer the mode heuristically.
+/// Returns `true` when this function had to infer the mode.
 pub fn ensure_mode(annotations: &mut SpanAnnotations, text: &str) -> bool {
     if annotations.writing_mode.is_none() {
-        annotations.writing_mode = Some(mode_from_heuristic(text));
+        annotations.writing_mode = Some(mode_from_inference(text));
         return true;
     }
     false
