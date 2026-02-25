@@ -6,7 +6,6 @@
 
   const searchInput = document.getElementById("searchInput");
   const profileFilter = document.getElementById("profileFilter");
-  const standardFilter = document.getElementById("standardFilter");
   const resultsMeta = document.getElementById("resultsMeta");
   const rulesBody = document.getElementById("rulesBody");
 
@@ -41,27 +40,18 @@
 
   function hydrateFilters() {
     const profiles = [...new Set(state.rules.map((rule) => rule.profile))].sort();
-    const standards = [...new Set(state.rules.map((rule) => rule.standard))].sort();
 
     for (const profile of profiles) {
       profileFilter.appendChild(new Option(profile, profile));
-    }
-
-    for (const standard of standards) {
-      standardFilter.appendChild(new Option(standard, standard));
     }
   }
 
   function applyFilters() {
     const query = searchInput.value.trim().toLowerCase();
     const profile = profileFilter.value;
-    const standard = standardFilter.value;
 
     state.filtered = state.rules.filter((rule) => {
       if (profile !== "all" && rule.profile !== profile) {
-        return false;
-      }
-      if (standard !== "all" && rule.standard !== standard) {
         return false;
       }
       if (!query) {
@@ -90,12 +80,12 @@
     rulesBody.innerHTML = "";
 
     for (const rule of state.filtered) {
+      const standardLabel = formatStandardLabel(rule.standard);
       const row = document.createElement("tr");
       row.innerHTML = `
         <td class="rule-id-cell"><code>${escapeHtml(rule.id)}</code><br /><small>${escapeHtml(rule.title)}</small></td>
-        <td>${escapeHtml(rule.profile)}</td>
-        <td>${escapeHtml(rule.standard)}</td>
-        <td>${escapeHtml(rule.section_number)} · ${escapeHtml(rule.section_name)}</td>
+        <td class="profile-cell">${escapeHtml(rule.profile)}</td>
+        <td class="standard-cell">${escapeHtml(standardLabel)}</td>
         <td>${escapeHtml(rule.rule_number)}</td>
         <td>${escapeHtml(rule.citation)}</td>
       `;
@@ -114,9 +104,16 @@
       .replace(/'/g, "&#39;");
   }
 
+  // Keep public-facing standard names concise while preserving canonical JSON values.
+  function formatStandardLabel(standard) {
+    if (standard === "Project Glossary Policy") {
+      return "Project Glossary";
+    }
+    return standard;
+  }
+
   searchInput.addEventListener("input", applyFilters);
   profileFilter.addEventListener("change", applyFilters);
-  standardFilter.addEventListener("change", applyFilters);
 
   loadRules().catch((error) => {
     resultsMeta.textContent = String(error.message || error);

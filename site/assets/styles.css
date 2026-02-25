@@ -93,8 +93,8 @@ main {
 }
 
 .wordmark {
-    font: 700 1.25rem/1 var(--font-heading);
-    letter-spacing: 0.08em;
+    font: 400 2rem/1 var(--font-heading);
+    letter-spacing: 0.06em;
     color: var(--brand);
     text-transform: lowercase;
 }
@@ -108,6 +108,20 @@ h6,
 th,
 .nav a {
     font-family: var(--font-heading);
+    /* Railway ships as a regular weight here; avoid synthetic bold to keep counters crisp. */
+    font-synthesis: none;
+    font-weight: 400;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-size: 1.5rem;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
 }
 
 .nav {
@@ -139,8 +153,6 @@ th,
 
 .hero h1 {
     margin: 0 0 0.7rem;
-    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
-    line-height: 1.1;
 }
 
 .hero p {
@@ -288,7 +300,7 @@ code {
 
 .form-row {
     display: grid;
-    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    grid-template-columns: 1.7fr 1fr;
     gap: 0.7rem;
 }
 
@@ -362,6 +374,18 @@ tr:hover td {
 .rule-id-col,
 .rule-id-cell {
     min-width: 19rem;
+}
+
+.profile-col,
+.profile-cell {
+    min-width: 9.5rem;
+    white-space: nowrap;
+}
+
+.standard-col,
+.standard-cell {
+    min-width: 12rem;
+    white-space: nowrap;
 }
 
 .rule-id-cell code {
