@@ -22,6 +22,8 @@
 >
 > -George Orwell, ["Politics and the English Language"](https://www.orwellfoundation.com/the-orwell-foundation/orwell/essays-and-other-works/politics-and-the-english-language/) (1946)
 
+> 🚧 Pardon our dust! Work in progress. 🚧
+
 The project offers both a CLI tool and text editor integrations to provide clippy-style guidance and automated enforcement of:
 - Simplified Technical English ([ASD-STE100](https://www.asd-ste100.org))
 - Requirements grammars ([EARS](https://alistairmavin.com/ears/), by default)
@@ -31,120 +33,61 @@ The project offers both a CLI tool and text editor integrations to provide clipp
 ## Install
 
 ```bash
-# Install via Brew -- COMING SOON
-
-# Install script
+# Install latest release
 curl -fsSL https://raw.githubusercontent.com/walkerbrown/goodwrite/main/scripts/install.sh | bash
+
+# Homebrew install coming soon!
+# brew install goodwrite
 ```
 
 ## Quick Start
 
 ```bash
-# lint files/directories/globs
+# Check files, directories, or globs
 goodwrite check docs/**/*.md docs/**/*.typ
 
-# apply machine-applicable fixes
+# Apply machine-applicable fixes
 goodwrite fix docs/manual.md
-
-# initialize optional starter templates
-goodwrite init config    # goodwrite.toml
-goodwrite init glossary  # glossary.toml
 ```
 
-The default profiles applied, without `goodwrite.toml`, are:
-`["asd-ste100", "ears", "glossary"]`.
+Without `goodwrite.toml`, goodwrite enables `asd-ste100`, `ears`, and `glossary`.
 
-`goodwrite init config` and `goodwrite init glossary` refuse to overwrite
-existing files.
+## Optional Configuration
 
-When a file has no explicit writing mode annotations, goodwrite reports
-`goodwrite/missing-mode-annotation` as an info diagnostic. To suppress that for
-known paths, use `[unsafe].ignore` globs in `goodwrite.toml`. These globs are
-resolved relative to the directory containing `goodwrite.toml`.
+```toml
+[profiles]
+enable = ["asd-ste100", "ears", "glossary"]
+
+[glossary]
+path = "glossary.toml"
+
+[unsafe]
+ignore = ["docs/legacy/**/*.md"]
+```
 
 ## Requirement Syntax
 
-User-authored source stays ruleset-agnostic.
-
-Markdown:
-- `<!-- goodwrite:requirement --> ... <!-- goodwrite:requirement:end -->`
-- optional type: `<!-- goodwrite:requirement:<type> -->`
-
-Typst:
-- `#requirement[...]`
-- optional type helper: `#requirement_<type>[...]`
-
-Available `<type>` values are defined by the active requirement ruleset.
-
-Examples:
-
 ```markdown
+<!-- goodwrite:requirement -->
+When the pilot presses the button, the system shall record the event.
+<!-- goodwrite:requirement:end -->
+
 <!-- goodwrite:requirement:event-driven -->
 When voltage drops below 22.0 V, the controller shall issue an alert.
 <!-- goodwrite:requirement:end -->
 ```
 
 ```typst
+#requirement[
+When the pilot presses the button,
+  the system shall record the event.
+]
+
 #requirement_event[
 When voltage drops below 22.0 V,
   the controller shall issue an alert.
 ]
 ```
-
-## Architecture
-
-Pipeline:
-1. `goodwrite-extract`: source-mapped prose spans + annotations.
-2. `goodwrite-tokenize`: sentence/token/POS utilities + STE word counting.
-3. `goodwrite-core`: profile-aware rule dispatch and severity resolution.
-4. `goodwrite-cli` / `goodwrite-lsp`: terminal, JSON, SARIF, editor diagnostics.
-
-Workspace crates:
-- `crates/goodwrite-core`
-- `crates/goodwrite-extract`
-- `crates/goodwrite-tokenize`
-- `crates/goodwrite-asd-ste100`
-- `crates/goodwrite-ears`
-- `crates/goodwrite-glossary`
-- `crates/goodwrite-cli`
-- `crates/goodwrite-lsp`
-
-## Rule Index and Lookup
-
-Canonical index:
-- `crates/goodwrite-core/data/rule_index.toml`
-
-Each entry includes:
-- rule id + profile
-- standard/part/section number/section name/rule number
-- citation text
-- linked pass fixture + fail fixture
-
-ASD entries use exact section names and numbering so engineers can locate rules directly in the standard.
-
-Website explorer data is generated from the canonical index:
-- `site/data/rule_index.json`
-
-Generate/check:
-
-```bash
-python3 scripts/export_rule_index_json.py
-python3 scripts/export_rule_index_json.py --check
-```
-
-## Rule Accountability and CI Gates
-
-Hard gates before merge:
-
-```bash
-./scripts/ci/run.sh full
-```
-
-CI script documentation:
-- `scripts/ci/README.md`
-
-The accountability test enforces linked pass/fail behavior for every indexed rule and prints:
-- `Rule linkage tested: N/N`
 
 ## Dictionary
 

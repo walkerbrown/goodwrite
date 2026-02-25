@@ -6,7 +6,7 @@
         <title>goodwrite Docs</title>
         <meta
             name="description"
-            content="goodwrite configuration, CLI commands, requirement syntax, and CI quality gates."
+            content="goodwrite quickstart, optional configuration, and requirement annotation syntax."
         />
         <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
         <link rel="stylesheet" href="./assets/styles.css" />
@@ -32,84 +32,33 @@
                 <article class="card col-6">
                     <h2>Install and Run</h2>
                     <pre>
-# Install via Brew -- COMING SOON
-
-# Install script
+# Install from script
 curl -fsSL https://raw.githubusercontent.com/walkerbrown/goodwrite/main/scripts/install.sh | bash
 
-# check
+# Check files, directories, or globs
 goodwrite check docs/**/*.md docs/**/*.typ
 
-# fix machine-applicable diagnostics
-goodwrite fix docs/manual.md
-
-# create starter config template (optional)
-goodwrite init config
-
-# create starter glossary template (optional)
-goodwrite init glossary</pre
+# Apply machine-applicable fixes
+goodwrite fix docs/manual.md</pre
                     >
                 </article>
 
                 <article class="card col-6">
-                    <h2>Config Defaults</h2>
-                    <p>
-                        goodwrite runs without
-                        <span class="inline-code">goodwrite.toml</span>.
-                    </p>
-                    <ul>
-                        <li>
-                            Default profiles are
-                            <span class="inline-code"
-                                >["asd-ste100", "ears", "glossary"]</span
-                            >.
-                        </li>
-                        <li>
-                            <span class="inline-code">goodwrite init config</span>
-                            writes that profile list as commented lines and
-                            refuses to overwrite an existing config file.
-                        </li>
-                        <li>
-                            <span class="inline-code">goodwrite init glossary</span>
-                            refuses to overwrite an existing glossary file.
-                        </li>
-                        <li>
-                            Generated glossary examples are commented out, so
-                            sample entries are not enabled by accident.
-                        </li>
-                        <li>
-                            If you uncomment
-                            <span class="inline-code">profiles.enable</span>,
-                            only the listed profiles are enabled.
-                        </li>
-                        <li>
-                            When file-level mode annotations are missing,
-                            goodwrite emits
-                            <span class="inline-code"
-                                >goodwrite/missing-mode-annotation</span
-                            >
-                            as an info diagnostic.
-                        </li>
-                        <li>
-                            Use <span class="inline-code">[unsafe].ignore</span>
-                            globs to suppress that info diagnostic for selected
-                            files. These globs resolve relative to
-                            <span class="inline-code">goodwrite.toml</span>.
-                        </li>
-                        <li>
-                            Configure requirement rulesets in
-                            <span class="inline-code">goodwrite.toml</span>.
-                        </li>
-                        <li>Source annotations never select a ruleset.</li>
-                    </ul>
+                    <h2>Optional Configuration</h2>
+                    <pre>
+[profiles]
+enable = ["asd-ste100", "ears", "glossary"]
+
+[glossary]
+path = "glossary.toml"
+
+[unsafe]
+ignore = ["docs/legacy/**/*.md"]</pre
+                    >
                 </article>
 
                 <article class="card col-12">
                     <h2>Requirement Syntax</h2>
-                    <p>
-                        Requirement type vocabulary comes from active
-                        requirement rulesets (EARS by default).
-                    </p>
                     <div class="grid">
                         <div class="col-6">
                             <h3>Markdown</h3>
@@ -118,7 +67,6 @@ goodwrite init glossary</pre
 The system shall reset in less than 100 ms.
 &lt;!-- goodwrite:requirement:end --&gt;
 
-&lt;!-- optional type --&gt;
 &lt;!-- goodwrite:requirement:state-driven --&gt;
 While battery voltage is below 22.0 V,
 the system shall reduce transmit power.
@@ -145,7 +93,8 @@ While battery voltage is below 22.0 V,
 
         <footer class="site-footer">
             <p>
-                goodwrite.dev/docs • Canonical usage and CI contract reference.
+                goodwrite.dev • Banish ambiguity and wrongwrite from your
+                technical documentation.
             </p>
         </footer>
     </body>

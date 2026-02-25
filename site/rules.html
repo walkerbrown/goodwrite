@@ -1,81 +1,100 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>goodwrite Rule Explorer</title>
-  <meta name="description" content="Searchable rule index for ASD-STE100, requirement, and glossary checks with citations and linked fixtures." />
-  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
-  <link rel="stylesheet" href="./assets/styles.css" />
-</head>
-<body>
-  <header class="site-header">
-    <a class="wordmark" href="./index.html">goodwrite</a>
-    <nav class="nav">
-      <a href="./index.html">Home</a>
-      <a href="./docs.html">Docs</a>
-      <a class="active" href="./rules.html">Rule Explorer</a>
-      <a href="https://github.com/walkerbrown/goodwrite">GitHub</a>
-    </nav>
-  </header>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>goodwrite Rule Explorer</title>
+        <meta
+            name="description"
+            content="Searchable rule index for ASD-STE100, requirement, and glossary checks."
+        />
+        <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+        <link rel="stylesheet" href="./assets/styles.css" />
+    </head>
+    <body>
+        <header class="site-header">
+            <a class="wordmark" href="./index.html">goodwrite</a>
+            <nav class="nav">
+                <a href="./index.html">Home</a>
+                <a href="./docs.html">Docs</a>
+                <a class="active" href="./rules.html">Rule Explorer</a>
+                <a href="https://github.com/walkerbrown/goodwrite">GitHub</a>
+            </nav>
+        </header>
 
-  <main>
-    <section class="hero">
-      <h1>Canonical Rule Index</h1>
-      <p>All shipping rule IDs come from <span class="inline-code">crates/goodwrite-core/data/rule_index.toml</span>. This page renders generated JSON from that canonical index.</p>
-      <div class="kv" id="summaryTiles">
-        <div class="tile"><div class="label">Total rules</div><div class="value" id="totalRules">-</div></div>
-        <div class="tile"><div class="label">ASD-STE100</div><div class="value" id="asdRules">-</div></div>
-        <div class="tile"><div class="label">Requirement + Glossary</div><div class="value" id="otherRules">-</div></div>
-      </div>
-    </section>
+        <main>
+            <section class="hero">
+                <h1>Rule Explorer</h1>
+                <p>Search and filter all shipping rule IDs.</p>
+                <div class="kv" id="summaryTiles">
+                    <div class="tile">
+                        <div class="label">Total rules</div>
+                        <div class="value" id="totalRules">-</div>
+                    </div>
+                    <div class="tile">
+                        <div class="label">ASD-STE100</div>
+                        <div class="value" id="asdRules">-</div>
+                    </div>
+                    <div class="tile">
+                        <div class="label">Requirement + Glossary</div>
+                        <div class="value" id="otherRules">-</div>
+                    </div>
+                </div>
+            </section>
 
-    <section class="card" style="margin-top: 1rem;">
-      <h2>Filters</h2>
-      <div class="form-row">
-        <div>
-          <label for="searchInput">Search</label>
-          <input id="searchInput" type="search" placeholder="rule id, title, citation, section" />
-        </div>
-        <div>
-          <label for="profileFilter">Profile</label>
-          <select id="profileFilter">
-            <option value="all">All profiles</option>
-          </select>
-        </div>
-        <div>
-          <label for="standardFilter">Standard</label>
-          <select id="standardFilter">
-            <option value="all">All standards</option>
-          </select>
-        </div>
-      </div>
-      <p><small class="meta" id="resultsMeta">Loading index…</small></p>
+            <section class="card" style="margin-top: 1rem">
+                <h2>Filters</h2>
+                <div class="form-row">
+                    <div>
+                        <label for="searchInput">Search</label>
+                        <input
+                            id="searchInput"
+                            type="search"
+                            placeholder="rule id, title, citation, section"
+                        />
+                    </div>
+                    <div>
+                        <label for="profileFilter">Profile</label>
+                        <select id="profileFilter">
+                            <option value="all">All profiles</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="standardFilter">Standard</label>
+                        <select id="standardFilter">
+                            <option value="all">All standards</option>
+                        </select>
+                    </div>
+                </div>
+                <p>
+                    <small class="meta" id="resultsMeta">Loading index…</small>
+                </p>
 
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Rule ID</th>
-              <th>Profile</th>
-              <th>Standard</th>
-              <th>Section</th>
-              <th>Rule</th>
-              <th>Citation</th>
-              <th>Pass fixture</th>
-              <th>Fail fixture</th>
-            </tr>
-          </thead>
-          <tbody id="rulesBody"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+                <div class="table-wrap">
+                    <table class="rules-table">
+                        <thead>
+                            <tr>
+                                <th class="rule-id-col">Rule ID</th>
+                                <th>Profile</th>
+                                <th>Standard</th>
+                                <th>Section</th>
+                                <th>Rule</th>
+                                <th>Citation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rulesBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
 
-  <footer class="site-footer">
-    <p>goodwrite.dev/rules • Generated from canonical rule index data.</p>
-  </footer>
+        <footer class="site-footer">
+            <p>
+                goodwrite.dev • Banish ambiguity and wrongwrite from your
+                technical documentation.
+            </p>
+        </footer>
 
-  <script src="./assets/rules.js" defer></script>
-</body>
+        <script src="./assets/rules.js" defer></script>
+    </body>
 </html>

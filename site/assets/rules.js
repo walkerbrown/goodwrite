@@ -76,8 +76,6 @@
         rule.section_number,
         rule.rule_number,
         rule.citation,
-        rule.test_pass,
-        rule.test_fail,
       ]
         .join(" ")
         .toLowerCase();
@@ -94,14 +92,12 @@
     for (const rule of state.filtered) {
       const row = document.createElement("tr");
       row.innerHTML = `
-        <td><code>${escapeHtml(rule.id)}</code><br /><small>${escapeHtml(rule.title)}</small></td>
+        <td class="rule-id-cell"><code>${escapeHtml(rule.id)}</code><br /><small>${escapeHtml(rule.title)}</small></td>
         <td>${escapeHtml(rule.profile)}</td>
         <td>${escapeHtml(rule.standard)}</td>
         <td>${escapeHtml(rule.section_number)} · ${escapeHtml(rule.section_name)}</td>
         <td>${escapeHtml(rule.rule_number)}</td>
         <td>${escapeHtml(rule.citation)}</td>
-        <td><code>${escapeHtml(rule.test_pass)}</code></td>
-        <td><code>${escapeHtml(rule.test_fail)}</code></td>
       `;
       rulesBody.appendChild(row);
     }

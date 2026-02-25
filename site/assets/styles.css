@@ -334,6 +334,10 @@ table {
     min-width: 860px;
 }
 
+table.rules-table {
+    min-width: 740px;
+}
+
 th,
 td {
     text-align: left;
@@ -353,6 +357,19 @@ th {
 
 tr:hover td {
     background: #fffcf5;
+}
+
+.rule-id-col,
+.rule-id-cell {
+    min-width: 19rem;
+}
+
+.rule-id-cell code {
+    white-space: nowrap;
+}
+
+.rule-id-cell small {
+    color: var(--ink-soft);
 }
 
 .kv {
