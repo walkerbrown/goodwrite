@@ -84,7 +84,7 @@ impl RuleSet {
                 if !ruleset.eq_ignore_ascii_case("ears")
                     || !ctx.config.requirement_ruleset_enabled(ruleset)
                 {
-                    // Source text cannot force a ruleset; config/CLI controls
+                    // Source text cannot force a ruleset; config controls
                     // active requirement rulesets centrally.
                     continue;
                 }

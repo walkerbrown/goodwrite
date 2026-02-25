@@ -43,24 +43,52 @@ goodwrite check docs/**/*.md docs/**/*.typ
 # fix machine-applicable diagnostics
 goodwrite fix docs/manual.md
 
-# create starter config
-goodwrite init</pre
+# create starter config template (optional)
+goodwrite init config
+
+# create starter glossary template (optional)
+goodwrite init glossary</pre
                     >
                 </article>
 
                 <article class="card col-6">
-                    <h2>Config Boundary</h2>
-                    <p>Ruleset identity is external to source files:</p>
+                    <h2>Config Defaults</h2>
+                    <p>
+                        goodwrite runs without
+                        <span class="inline-code">goodwrite.toml</span>.
+                    </p>
                     <ul>
                         <li>
-                            Set default/active requirement rulesets in
-                            <span class="inline-code">goodwrite.toml</span>.
+                            Default profiles are
+                            <span class="inline-code"
+                                >["asd-ste100", "ears", "glossary"]</span
+                            >.
                         </li>
                         <li>
-                            Override per invocation with
-                            <span class="inline-code"
-                                >--requirement-ruleset</span
-                            >.
+                            <span class="inline-code">goodwrite init config</span>
+                            writes that profile list as commented lines and
+                            refuses to overwrite an existing config file.
+                        </li>
+                        <li>
+                            <span class="inline-code">goodwrite init glossary</span>
+                            refuses to overwrite an existing glossary file.
+                        </li>
+                        <li>
+                            Generated glossary examples are commented out, so
+                            sample entries are not enabled by accident.
+                        </li>
+                        <li>
+                            If you uncomment
+                            <span class="inline-code">profiles.enable</span>,
+                            only the listed profiles are enabled.
+                        </li>
+                        <li>
+                            Set <span class="inline-code">heuristics.strict = true</span>
+                            to make fallback inference diagnostics fail checks.
+                        </li>
+                        <li>
+                            Configure requirement rulesets in
+                            <span class="inline-code">goodwrite.toml</span>.
                         </li>
                         <li>Source annotations never select a ruleset.</li>
                     </ul>

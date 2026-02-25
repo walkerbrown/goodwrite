@@ -22,18 +22,14 @@ use thiserror::Error;
 #[command(
     about = "A linter for Simplified Technical English (ASD-STE100)",
     long_about = "Checks technical documentation for compliance with the Simplified Technical English standard (ASD-STE100), requirement-style grammars, and your domain-specific technical glossary.",
-    after_help = "Quick start:\n  goodwrite check docs/\n  goodwrite fix docs/manual.md\n\nRule explorer: https://goodwrite.dev/rules\n",
+    after_help = "Quick start:\n  goodwrite check docs/\n  goodwrite fix docs/manual.md\n  goodwrite init config\n  goodwrite init glossary\n\nRule explorer: https://goodwrite.dev/rules\n",
     arg_required_else_help = true
 )]
 struct Cli {
     #[arg(short, long, default_value = "goodwrite.toml")]
     config: PathBuf,
 
-    /// Override the default requirement ruleset for this run.
-    #[arg(long)]
-    requirement_ruleset: Option<String>,
-
-    /// Treat heuristic fallback usage as an error.
+    /// Escalate heuristic fallback diagnostics from warning to error.
     #[arg(long)]
     strict: bool,
 
@@ -68,8 +64,11 @@ enum Command {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Create starter config files.
-    Init,
+    /// Create a starter file (`config` or `glossary`).
+    Init {
+        #[arg(value_name = "TARGET", value_enum)]
+        target: InitTarget,
+    },
 }
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
@@ -77,6 +76,12 @@ enum OutputFormat {
     Terminal,
     Json,
     Sarif,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum InitTarget {
+    Config,
+    Glossary,
 }
 
 #[derive(Debug)]
@@ -105,7 +110,6 @@ fn run(cli: Cli) -> i32 {
 fn execute(cli: Cli) -> Result<i32, CliError> {
     let Cli {
         config: config_path,
-        requirement_ruleset,
         strict,
         color: color_choice,
         command,
@@ -123,14 +127,14 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
     setup_miette(color);
 
     match command {
-        Command::Init => {
-            init_files()?;
-            println!("created goodwrite.toml and glossary.toml if missing");
+        Command::Init { target } => {
+            let path = init_file(target)?;
+            println!("created {path}");
             Ok(0)
         }
         Command::Check { files, format } => {
             let mut config = load_config(&config_path)?;
-            apply_cli_overrides(&mut config, requirement_ruleset.as_deref(), strict)?;
+            apply_cli_overrides(&mut config, strict);
 
             let progress = matches!(format, OutputFormat::Terminal)
                 .then(|| std::io::IsTerminal::is_terminal(&std::io::stderr()))
@@ -166,7 +170,7 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
         }
         Command::Fix { files, dry_run } => {
             let mut config = load_config(&config_path)?;
-            apply_cli_overrides(&mut config, requirement_ruleset.as_deref(), strict)?;
+            apply_cli_overrides(&mut config, strict);
             let checks = analyze_files(&files, &config, None)?;
             let mut changed_files = 0usize;
 
@@ -222,51 +226,10 @@ fn setup_miette(color: bool) {
     .ok();
 }
 
-fn apply_cli_overrides(
-    config: &mut GoodwriteConfig,
-    requirement_ruleset: Option<&str>,
-    strict: bool,
-) -> Result<(), CliError> {
-    if let Some(value) = requirement_ruleset {
-        let normalized = normalize_ruleset(value)?;
-        config.requirements.default_ruleset = normalized.clone();
-        if !config
-            .requirements
-            .active_rulesets
-            .iter()
-            .any(|item| item.eq_ignore_ascii_case(&normalized))
-        {
-            config.requirements.active_rulesets.push(normalized);
-        }
-    } else if config.requirements.active_rulesets.is_empty() {
-        config
-            .requirements
-            .active_rulesets
-            .push(config.requirements.default_ruleset.clone());
-    } else if !config
-        .requirements
-        .active_rulesets
-        .iter()
-        .any(|item| item.eq_ignore_ascii_case(&config.requirements.default_ruleset))
-    {
-        config.requirements.default_ruleset = config.requirements.active_rulesets[0].clone();
-    }
-
+fn apply_cli_overrides(config: &mut GoodwriteConfig, strict: bool) {
     if strict {
         config.heuristics.strict = true;
     }
-
-    Ok(())
-}
-
-fn normalize_ruleset(value: &str) -> Result<String, CliError> {
-    let normalized = value.trim().to_ascii_lowercase();
-    if normalized.is_empty() {
-        return Err(CliError::Usage(
-            "requirement ruleset cannot be empty".to_string(),
-        ));
-    }
-    Ok(normalized)
 }
 
 fn analyze_files(
@@ -571,47 +534,58 @@ fn load_config(path: &Path) -> Result<GoodwriteConfig, CliError> {
     GoodwriteConfig::from_path(path).map_err(CliError::Config)
 }
 
-fn init_files() -> Result<(), CliError> {
-    const CONFIG: &str = r#"[profiles]
-enable = ["asd-ste100", "ears", "glossary"]
+fn init_file(target: InitTarget) -> Result<&'static str, CliError> {
+    const CONFIG: &str = r#"# Optional: uncomment to customize enabled profiles.
+# [profiles]
+# enable = ["asd-ste100", "ears", "glossary"]
 
-[requirements]
-active_rulesets = ["ears"]
-default_ruleset = "ears"
+# Optional: treat heuristic fallback diagnostics as errors.
+# [heuristics]
+# strict = true
 
-[heuristics]
-strict = false
-
-[glossary]
-path = "glossary.toml"
-
-[format]
-typst = true
-markdown = true
+# Optional: customize glossary location if you do not use ./glossary.toml.
+# [glossary]
+# path = "glossary.toml"
 "#;
 
-    const GLOSSARY: &str = r#"[[terms]]
-canonical = "actuator"
-synonyms = ["control unit"]
-pos = "noun"
-category = "official-parts"
+    const GLOSSARY: &str = r#"# Optional: uncomment and adapt these examples.
+# [[approved]]
+# word = "actuator"
+# pos = "noun"
+#
+# [[not_approved]]
+# word = "control unit"
+# pos = "noun"
+# alternatives = [{ word = "actuator" }]
 "#;
 
-    if !Path::new("goodwrite.toml").exists() {
-        fs::write("goodwrite.toml", CONFIG).map_err(|source| CliError::Write {
-            path: "goodwrite.toml".to_string(),
-            source,
-        })?;
+    let path = match target {
+        InitTarget::Config => "goodwrite.toml",
+        InitTarget::Glossary => "glossary.toml",
+    };
+
+    if Path::new(path).exists() {
+        return Err(CliError::Usage(match target {
+            InitTarget::Config => {
+                "goodwrite.toml already exists; refusing to overwrite".to_string()
+            }
+            InitTarget::Glossary => {
+                "glossary.toml already exists; refusing to overwrite".to_string()
+            }
+        }));
     }
 
-    if !Path::new("glossary.toml").exists() {
-        fs::write("glossary.toml", GLOSSARY).map_err(|source| CliError::Write {
-            path: "glossary.toml".to_string(),
-            source,
-        })?;
-    }
+    let contents = match target {
+        InitTarget::Config => CONFIG,
+        InitTarget::Glossary => GLOSSARY,
+    };
 
-    Ok(())
+    fs::write(path, contents).map_err(|source| CliError::Write {
+        path: path.to_string(),
+        source,
+    })?;
+
+    Ok(path)
 }
 
 #[derive(Debug, Error)]

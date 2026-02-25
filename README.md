@@ -46,9 +46,13 @@ goodwrite check docs/**/*.md docs/**/*.typ
 # apply machine-applicable fixes
 goodwrite fix docs/manual.md
 
-# initialize config in a new project
-goodwrite init
+# initialize optional starter templates
+goodwrite init config    # goodwrite.toml
+goodwrite init glossary  # glossary.toml
 ```
+
+The default profiles applied, without `goodwrite.toml`, are:
+`["asd-ste100", "ears", "glossary"]`.
 
 ## Requirement Syntax
 

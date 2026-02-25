@@ -31,6 +31,98 @@ enable = ["asd-ste100"]
 }
 
 #[test]
+fn init_requires_explicit_target_argument() {
+    let workspace = TempWorkspace::new();
+
+    let output = run_goodwrite(&["init"], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("Usage:"), "{stderr}");
+    assert!(stderr.contains("init <TARGET>"), "{stderr}");
+}
+
+#[test]
+fn init_config_writes_commented_default_profiles_template() {
+    let workspace = TempWorkspace::new();
+
+    let output = run_goodwrite(&["init", "config"], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+
+    let config_path = workspace.root().join("goodwrite.toml");
+    assert!(config_path.exists(), "expected config file to exist");
+    assert!(
+        !workspace.root().join("glossary.toml").exists(),
+        "did not expect glossary.toml to be created"
+    );
+
+    let config = fs::read_to_string(&config_path).expect("read generated config");
+    assert!(config.contains("# [profiles]"), "{config}");
+    assert!(
+        config.contains("# enable = [\"asd-ste100\", \"ears\", \"glossary\"]"),
+        "{config}"
+    );
+}
+
+#[test]
+fn init_glossary_creates_glossary_template_only() {
+    let workspace = TempWorkspace::new();
+
+    let output = run_goodwrite(&["init", "glossary"], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+
+    let glossary_path = workspace.root().join("glossary.toml");
+    assert!(glossary_path.exists(), "expected glossary file to exist");
+    assert!(
+        !workspace.root().join("goodwrite.toml").exists(),
+        "did not expect goodwrite.toml to be created"
+    );
+
+    let glossary = fs::read_to_string(&glossary_path).expect("read generated glossary");
+    assert!(glossary.contains("# [[approved]]"), "{glossary}");
+    assert!(glossary.contains("# [[not_approved]]"), "{glossary}");
+}
+
+#[test]
+fn init_glossary_fails_if_glossary_already_exists() {
+    let workspace = TempWorkspace::new();
+    workspace.write(
+        "glossary.toml",
+        "[[approved]]\nword = \"existing\"\npos = \"noun\"\n",
+    );
+
+    let output = run_goodwrite(&["init", "glossary"], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("glossary.toml already exists"), "{stderr}");
+}
+
+#[test]
+fn init_config_fails_if_config_already_exists() {
+    let workspace = TempWorkspace::new();
+    workspace.write("goodwrite.toml", "[profiles]\nenable = [\"asd-ste100\"]\n");
+
+    let output = run_goodwrite(&["init", "config"], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("goodwrite.toml already exists"), "{stderr}");
+}
+
+#[test]
+fn default_profiles_include_ears_without_config_file() {
+    let workspace = TempWorkspace::new();
+    let input = workspace.write(
+        "req.md",
+        "<!-- goodwrite:requirement:auto -->\nWhen the pilot presses the button, while the aircraft is on ground, the system record the event.\n<!-- goodwrite:requirement:end -->\n",
+    );
+
+    let output = run_goodwrite(&["check", as_utf8(&input)], workspace.root());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("ears/clause-order"), "{stderr}");
+}
+
+#[test]
 fn fix_dry_run_prints_unified_diff() {
     let workspace = TempWorkspace::new();
     let config = workspace.write(
@@ -547,10 +639,10 @@ default_ruleset = "ears"
 }
 
 #[test]
-fn requirement_ruleset_is_controlled_by_cli_or_config_only() {
+fn requirement_ruleset_is_controlled_by_config_only() {
     let workspace = TempWorkspace::new();
-    let config = workspace.write(
-        "goodwrite.toml",
+    let disabled_config = workspace.write(
+        "disabled.toml",
         r#"[profiles]
 enable = ["ears"]
 
@@ -559,39 +651,69 @@ active_rulesets = ["internal-disabled"]
 default_ruleset = "internal-disabled"
 "#,
     );
+    let enabled_config = workspace.write(
+        "enabled.toml",
+        r#"[profiles]
+enable = ["ears"]
+
+[requirements]
+active_rulesets = ["ears"]
+default_ruleset = "ears"
+"#,
+    );
     let input = workspace.write(
         "req.md",
         "<!-- goodwrite:requirement:auto -->\nWhen the pilot presses the button, while the aircraft is on ground, the system record the event.\n<!-- goodwrite:requirement:end -->\n",
     );
 
-    let no_override = run_goodwrite(
-        &["--config", as_utf8(&config), "check", as_utf8(&input)],
-        workspace.root(),
-    );
-    let no_override_stderr = String::from_utf8_lossy(&no_override.stderr);
-    assert!(no_override.status.success(), "{no_override_stderr}");
-    assert!(
-        !no_override_stderr.contains("ears/clause-order"),
-        "{no_override_stderr}"
-    );
-
-    let with_override = run_goodwrite(
+    let disabled_output = run_goodwrite(
         &[
             "--config",
-            as_utf8(&config),
-            "--requirement-ruleset",
-            "ears",
+            as_utf8(&disabled_config),
             "check",
             as_utf8(&input),
         ],
         workspace.root(),
     );
-    let with_override_stderr = String::from_utf8_lossy(&with_override.stderr);
-    assert!(with_override.status.success(), "{with_override_stderr}");
+    let disabled_stderr = String::from_utf8_lossy(&disabled_output.stderr);
+    assert!(disabled_output.status.success(), "{disabled_stderr}");
     assert!(
-        with_override_stderr.contains("ears/clause-order"),
-        "{with_override_stderr}"
+        !disabled_stderr.contains("ears/clause-order"),
+        "{disabled_stderr}"
     );
+
+    let enabled_output = run_goodwrite(
+        &[
+            "--config",
+            as_utf8(&enabled_config),
+            "check",
+            as_utf8(&input),
+        ],
+        workspace.root(),
+    );
+    let enabled_stderr = String::from_utf8_lossy(&enabled_output.stderr);
+    assert!(enabled_output.status.success(), "{enabled_stderr}");
+    assert!(
+        enabled_stderr.contains("ears/clause-order"),
+        "{enabled_stderr}"
+    );
+}
+
+#[test]
+fn requirement_ruleset_cli_flag_is_rejected() {
+    let workspace = TempWorkspace::new();
+    let input = workspace.write(
+        "req.md",
+        "<!-- goodwrite:requirement -->\nThe system shall reset.\n<!-- goodwrite:requirement:end -->\n",
+    );
+
+    let output = run_goodwrite(
+        &["--requirement-ruleset", "ears", "check", as_utf8(&input)],
+        workspace.root(),
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success(), "{stderr}");
+    assert!(stderr.contains("--requirement-ruleset"), "{stderr}");
 }
 
 #[test]
