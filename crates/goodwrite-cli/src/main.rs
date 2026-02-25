@@ -20,9 +20,10 @@ use thiserror::Error;
 #[command(name = "goodwrite")]
 #[command(version)]
 #[command(
-    about = "A linter for Simplified Technical English (ASD-STE100)",
-    long_about = "Checks technical documentation for compliance with the Simplified Technical English standard (ASD-STE100), requirement-style grammars, and your domain-specific technical glossary.",
-    after_help = "Quick start:\n  goodwrite check docs/\n  goodwrite fix docs/manual.md\n  goodwrite init config\n  goodwrite init glossary\n\nRule explorer: https://goodwrite.dev/rules\n",
+    about = "A linter for engineering requirements and Simplified Technical English (ASD-STE100).",
+    long_about = "A linter for engineering requirements and Simplified Technical English (ASD-STE100).",
+    override_usage = "goodwrite [OPTIONS] COMMAND [PATH]...",
+    after_help = "Quick start:\n  goodwrite check docs/\n  goodwrite fix docs/manual.md\n  goodwrite init config\n  goodwrite init glossary\n\nhttps://goodwrite.dev\n",
     arg_required_else_help = true
 )]
 struct Cli {
@@ -30,7 +31,7 @@ struct Cli {
     config: PathBuf,
 
     /// Control color output (auto, always, never).
-    #[arg(long, value_enum, default_value = "auto")]
+    #[arg(long, visible_alias = "colors", value_enum, default_value = "auto")]
     color: ColorChoice,
 
     #[command(subcommand)]
@@ -53,10 +54,11 @@ enum Command {
         #[arg(long, value_enum, default_value = "terminal")]
         format: OutputFormat,
     },
-    /// Apply machine-applicable suggestions.
+    /// Apply machine-applicable suggestions (accepts `--dry-run`).
     Fix {
         #[arg(value_name = "PATH")]
         files: Vec<PathBuf>,
+        /// Print planned edits as unified diffs without writing files.
         #[arg(long)]
         dry_run: bool,
     },
@@ -189,7 +191,10 @@ fn execute(cli: Cli) -> Result<i32, CliError> {
 
                 changed_files += 1;
                 if dry_run {
-                    println!("{}", fix::diff_output(&item.path, &item.source, &updated));
+                    println!(
+                        "{}",
+                        fix::diff_output(&item.path, &item.source, &updated, color)
+                    );
                 } else {
                     fs::write(&item.path, updated).map_err(|source| CliError::Write {
                         path: item.path.display().to_string(),

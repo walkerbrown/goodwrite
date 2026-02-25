@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use goodwrite_core::Suggestion;
+use owo_colors::OwoColorize;
 use similar::{ChangeTag, TextDiff};
 
 /// Apply non-overlapping machine-applicable suggestions.
@@ -37,10 +38,18 @@ pub fn apply_suggestions(source: &str, suggestions: &[Suggestion]) -> (String, u
 }
 
 /// Unified diff output for dry-run mode.
-pub fn diff_output(path: &Path, before: &str, after: &str) -> String {
+pub fn diff_output(path: &Path, before: &str, after: &str, color: bool) -> String {
     let diff = TextDiff::from_lines(before, after);
     let mut out = String::new();
-    out.push_str(&format!("--- {}\n+++ {}\n", path.display(), path.display()));
+    let before_header = format!("--- {}\n", path.display());
+    let after_header = format!("+++ {}\n", path.display());
+    if color {
+        out.push_str(&before_header.red().bold().to_string());
+        out.push_str(&after_header.green().bold().to_string());
+    } else {
+        out.push_str(&before_header);
+        out.push_str(&after_header);
+    }
 
     for change in diff.iter_all_changes() {
         let sign = match change.tag() {
@@ -48,8 +57,16 @@ pub fn diff_output(path: &Path, before: &str, after: &str) -> String {
             ChangeTag::Insert => '+',
             ChangeTag::Equal => ' ',
         };
-        out.push(sign);
-        out.push_str(change.as_str().unwrap_or_default());
+        let line = format!("{sign}{}", change.as_str().unwrap_or_default());
+        if color {
+            match change.tag() {
+                ChangeTag::Delete => out.push_str(&line.red().to_string()),
+                ChangeTag::Insert => out.push_str(&line.green().to_string()),
+                ChangeTag::Equal => out.push_str(&line),
+            }
+        } else {
+            out.push_str(&line);
+        }
     }
 
     out

@@ -207,6 +207,76 @@ enable = ["asd-ste100"]
 }
 
 #[test]
+fn fix_dry_run_honors_color_always() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100"]
+"#,
+    );
+    let input = workspace.write(
+        "doc.md",
+        "<!-- goodwrite:mode:descriptive -->\nDo not open valve; close valve.\n",
+    );
+
+    let output = run_goodwrite(
+        &[
+            "--config",
+            as_utf8(&config),
+            "--color",
+            "always",
+            "fix",
+            "--dry-run",
+            as_utf8(&input),
+        ],
+        workspace.root(),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+    assert!(stdout.contains("\u{1b}["), "{stdout}");
+    assert!(
+        stdout.contains("+Do not open valve. Close valve."),
+        "{stdout}"
+    );
+}
+
+#[test]
+fn fix_dry_run_honors_color_never() {
+    let workspace = TempWorkspace::new();
+    let config = workspace.write(
+        "goodwrite.toml",
+        r#"[profiles]
+enable = ["asd-ste100"]
+"#,
+    );
+    let input = workspace.write(
+        "doc.md",
+        "<!-- goodwrite:mode:descriptive -->\nDo not open valve; close valve.\n",
+    );
+
+    let output = run_goodwrite(
+        &[
+            "--config",
+            as_utf8(&config),
+            "--color",
+            "never",
+            "fix",
+            "--dry-run",
+            as_utf8(&input),
+        ],
+        workspace.root(),
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "{stderr}");
+    assert!(!stdout.contains("\u{1b}["), "{stdout}");
+}
+
+#[test]
 fn cant_review_is_not_misclassified_as_noun_phrase() {
     let workspace = TempWorkspace::new();
     let config = workspace.write(
